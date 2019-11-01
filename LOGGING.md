@@ -91,4 +91,4 @@ Android 7.0 and higher:
 
 ## What devices support pseudorange measurements and navigation messages?
 
-Check out the [FAQ](https://github.com/barbeau/gpstest/blob/master/FAQ.md#what-android-70-devices-support-logging-raw-pseudorange-and-navigation-messages) for known device information.
+Check out the [FAQ](https://github.com/chesapeaketechnology/gpstest/blob/master/FAQ.md#what-android-70-devices-support-logging-raw-pseudorange-and-navigation-messages) for known device information.

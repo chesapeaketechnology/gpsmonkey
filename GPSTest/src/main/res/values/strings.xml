@@ -23,6 +23,26 @@
     <string name="gps_map_title">Map</string>
     <string name="gps_sky_title">Sky</string>
     <string name="gps_accuracy_title">Accuracy</string>
+<!--Service-->
+    <string name="timer_service_name">GPS Monkey Logger</string>
+
+    <string name="data_saved_location">Data saved in </string>
+
+
+    <string name="notification">GPS Monkey is collecting data...</string>
+    <string name="notification_remote">GPS Monkey is listening for remote data...</string>
+    <string name="notification_historical">GPS Monkey is reviewing old data...</string>
+
+
+    <string name="quit_GPSMonkey">Quit GPS Monkey?</string>
+    <string name="quit_GPSMonkey_narrative">Do you want to shutdown GPS Monkey or do you want  GPS Monkey to keep collecting data in the background?</string>
+    <string name="quit_yes">Shutdown</string>
+
+    <string name="quit_run_in_background">Run in background</string>
+    <string name="does_not_support_battery_optimization">This device does not support battery optimization.</string>
+    <string name="enable_battery_optimization">Settings adjustment recommended</string>
+    <string name="battery_optimizations_narrative">Can I turn off battery optimization for NinjaGPS? This will allow better updates from sensors but will drain the battery a bit more.</string>
+    <string name="battery_optimize_yes">Ok</string>
 
     <!-- Navigation Drawer -->
     <string name="navdrawer_separator_assist_data">Modify assist data</string>
@@ -176,12 +196,12 @@
 
     <!-- Permissions -->
     <string name="title_location_permission">Need location permission</string>
-    <string name="text_location_permission">GPSTest needs access to your location to show GNSS data. If you select \"Never ask again\" you will need to reinstall the app or enable permissions via system settings.</string>
+    <string name="text_location_permission">GPS Monkey needs access to your location to show GNSS data. If you select \"Never ask again\" you will need to reinstall the app or enable permissions via system settings.</string>
     <string name="ok">OK</string>
     <string name="exit">EXIT</string>
 
     <!-- Send feedback -->
-    <string name="feedback_subject">GPSTest: Feedback</string>
+    <string name="feedback_subject">GPS Monkey: Feedback</string>
     <string name="feedback_body">Complaints, kudos, or bug reports are welcome!\n\n\n</string>
     <string name="feedback_error">Unable to send feedback: no suitable application found.
     </string>
@@ -212,6 +232,8 @@
     <string name="pref_map_type_title">Map Type</string>
     <string name="pref_map_type_summary">Sets the type of map tiles shown</string>
     <string name="pref_map_type_dialog_title">Choose Map Type</string>
+
+    <string name="pref_sharing_category_title">Sharing</string>
 
     <string name="pref_rotate_map_with_compass_title">Rotate Map with Compass</string>
     <string name="pref_rotate_map_with_compass_summary">Change the map orientation based on your
@@ -254,14 +276,14 @@
     <string name="pref_true_north_summary">Compass will face true north instead of magnetic north
     </string>
 
+
     <!-- Output category -->
     <string name="pref_output_category_title">Logging and Output</string>
     <string name="pref_output_category_summary">Log NMEA, raw measurements, or navigation messsages to files or Android Studio</string>
 
     <!-- Android Monitor Output -->
-    <string name="pref_as_output_category_title">Android Monitor Output</string>
     <string name="pref_nmea_output_title">NMEA</string>
-    <string name="pref_as_nmea_output_summary">Logs NMEA sentences to Android Studio</string>
+    <string name="pref_nmea_output_summary">Logs NMEA sentences to Android Studio and files on the device</string>
     <string name="pref_nmea_timestamp_output_title">NMEA Timestamp</string>
     <string name="pref_nmea_timestamp_output_summary">Include NMEA timestamp in output</string>
     <string name="pref_measurement_output_title">Measurements</string>
@@ -303,6 +325,11 @@
     <string name="preferences_coordinate_format_dms">Degrees, Minutes, Decimal Seconds</string>
     <string name="preferences_coordinate_format_ddm">Degrees, Decimal Minutes</string>
 
+    <!-- Android Monitor Output -->
+    <string name="pref_as_output_category_title">Android Monitor Output</string>
+    <string name="pref_as_nmea_output_summary">Logs NMEA sentences to Android Studio</string>
+
+
     <string name="preferences_preferred_distance_units_title">Preferred distance units</string>
     <string name="preferences_preferred_distance_units_option_meters">Meters</string>
     <string name="preferences_preferred_distance_units_option_feet">Feet</string>
@@ -321,9 +348,9 @@
 
     <string name="help_text">
         <b>Frequently Asked Questions (FAQ)</b>
-        - https://github.com/barbeau/gpstest/blob/master/FAQ.md\n\n
+        - https://github.com/chesapeaketechnology/gpstest/blob/master/FAQ.md\n\n
 
-        <b>*** Status View ***</b>\n\n&#8226;\u0020
+           <b>*** Status View ***</b>\n\n&#8226;\u0020
         <b>Latitude</b>
         - In decimal degrees (WGS 84)\n&#8226;\u0020
         <b>Longitude</b>
@@ -375,8 +402,6 @@
         - Hexagons\n&#8226;\u0020
         <b>BeiDou/COMPASS (China)</b>
         - Pentagons\n&#8226;\u0020
-        <b>IRNSS (India)</b>
-        - Ovals\n&#8226;\u0020
         <b>SBAS (WAAS, EGNOS, GAGAN, MSAS, SDCM, SNAS, SACCSA)</b>
         - Diamonds\n\n
 
@@ -392,11 +417,6 @@
         <b>*** Accuracy View ***</b>\n\n&#8226;\u0020
         <b>Vertical error</b>
         - Vertical error measurements, unlike horizontal error, can be positive or negative.  When displayed in the Accuracy view, vertical error, and average vertical error, are both calculated using the absolute value of the error measurement.\n\n
-
-        &#8226;\u0020Set your real location quickly using QR codes. See http://bit.ly/gpstest-qr-codes for details.\n\n
-
-        <b>*** File Logging ***</b>\n\n
-        &#8226;\u0020Enable file logging in Settings for NMEA, raw measurments, nav messages, and location fixes. See http://bit.ly/gpstest-file for details.\n\n
 
         <b>*** Acknowledgments ***</b>\n\n
         &#8226;\u0020 <b>Mike Lockwood</b> - original developer for v1.x\n
@@ -414,4 +434,11 @@
         &#8226;\u0020 Polish translation provided by Adam Wandelt\n
         &#8226;\u0020 French translation provided by Olivier Merlin &amp; Jérémy Belloir\n
     </string>
+    <string name="auto_share">auto_share_file</string>
+    <string name="share_geopackage_narrative">Share recorded data to others.</string>
+    <string name="share_geopackage">Share Data</string>
+    <string name="not_supported_title">GPS Monkey may not work.</string>
+    <string name="not_supported_description">GPS Monkey is not receiving raw measurements from the phone.</string>
+    <string name="try_anyway">Keep Trying...</string>
+    <string name="uninstall">Uninstall GPS Monkey</string>
 </resources>

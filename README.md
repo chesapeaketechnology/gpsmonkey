@@ -50,7 +50,7 @@ You can open and build this project using [Android Studio](https://developer.and
 
 We welcome contributions to the project!  Please see our [Contributing Guide](.github/CONTRIBUTING.md) for details, including Code Style Guidelines and Template.
 
-Don't know where to start?  Take a look at the issues marked with the [your-first-pr](https://github.com/barbeau/gpstest/labels/your-first-pr) label and comment to let me know if you're interested in working on it.
+Don't know where to start?  Take a look at the issues marked with the [your-first-pr](https://github.com/chesapeaketechnology/gpstest/labels/your-first-pr) label and comment to let me know if you're interested in working on it.
 
 ### Translations
 
