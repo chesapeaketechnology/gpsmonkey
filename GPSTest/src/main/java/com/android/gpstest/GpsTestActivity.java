@@ -507,6 +507,11 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
         super.onPause();
     }
 
+
+    private boolean isFileLoggingEnabled() {
+        return mWriteNmeaToFile || mWriteRawMeasurementsToFile || mWriteNavMessageToFile || mWriteLocationToFile;
+    }
+
     @Override
     protected void onStop() {
         super.onStop();
@@ -1392,7 +1397,8 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
             case R.id.gps_switch:
                 return true;
             case R.id.share:
-                share();
+                //share();
+                sendLocation();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -1538,7 +1544,10 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
                 mLastLocation.getTime());
     }
 
-    private void sendLocation() {
+    private void share() {
+        UIUtils.createShareDialog(this, mLastLocation, isFileLoggingEnabled(), mFileLogger, null).show();
+    }
+        private void sendLocation() {
 //        GPSMonkeyService.shareFile();
         //restart recording.
 //        GPSMonkeyService.getGeoPackageRecorder().startup();
