@@ -5,10 +5,9 @@
         android:title="@string/pref_display_category_title"
         android:key="@string/pref_key_display_category">
         <CheckBoxPreference
+            android:defaultValue="true"
             android:key="@string/pref_key_dark_theme"
-            android:title="@string/pref_dark_theme_title"
-            android:summary="@string/pref_dark_theme_summary"
-            android:defaultValue="false" />
+            android:summary="@string/pref_dark_theme_summary" />
         <ListPreference
             android:key="@string/pref_key_language"
             android:title="@string/pref_language_title"
@@ -73,8 +72,19 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="@string/pref_gps_category_title"
-        android:key="@string/pref_key_gps_category">
+        android:key="@string/pref_key_sharing_category"
+        android:title="@string/pref_sharing_category_title">
+        <CheckBoxPreference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:defaultValue="true"
+            android:key="check_box_preference_1"
+            android:summary="@string/share_geopackage_narrative"
+            android:title="@string/share_geopackage" />
+    </PreferenceCategory>
+    <PreferenceCategory
+            android:title="@string/pref_gps_category_title"
+            android:key="@string/pref_key_gps_category">
         <CheckBoxPreference
             android:key="@string/pref_key_auto_start_gps"
             android:title="@string/pref_auto_start_gps_title"
@@ -159,5 +169,6 @@
                     android:defaultValue="false" />
             </PreferenceCategory>
         </PreferenceScreen>
+            android:key="@string/pref_key_android_monitor_category">
     </PreferenceCategory>
 </PreferenceScreen>

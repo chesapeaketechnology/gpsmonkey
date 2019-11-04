@@ -42,8 +42,8 @@ Galileo support has also been confirmed using GPSTest on the following devices:
 
 * BQ Aquaris X5 Plus (See [this post](https://groups.google.com/d/msg/gpstest_android/SbvcUyGU67U/cL8T9GX3BwAJ))
 * Huawei Mate 9 (See [this post](http://www.startlr.com/we-tried-galileo-huawei-mate-9-already-sees-the-european-satellites/))
-* Samsung Galaxy S8 and S8+ (See [this post](https://github.com/barbeau/gpstest/issues/58#issuecomment-319781535) and [official specs](http://www.samsung.com/global/galaxy/galaxy-s8/specs/) which say "Location (GPS, Galileo, Glonass, BeiDou) *Galileo and BeiDou coverage may be limited.")
-* OnePlus 5 (Android 7.1.1 / OxygenOS 4.5.8) (See [this post](https://github.com/barbeau/gpstest/issues/58#issuecomment-322124679))
+* Samsung Galaxy S8 and S8+ (See [this post](https://github.com/chesapeaketechnology/gpstest/issues/58#issuecomment-319781535) and [official specs](http://www.samsung.com/global/galaxy/galaxy-s8/specs/) which say "Location (GPS, Galileo, Glonass, BeiDou) *Galileo and BeiDou coverage may be limited.")
+* OnePlus 5 (Android 7.1.1 / OxygenOS 4.5.8) (See [this post](https://github.com/chesapeaketechnology/gpstest/issues/58#issuecomment-322124679))
 * Huawei P10 (See [this post](https://groups.google.com/forum/#!topic/gpstest_android/Kc_YOQLp35I) - Android 7.0, firmware version L29C432B171)
 * OnePlus 5T (See [this post](https://groups.google.com/forum/m/#!topic/gpstest_android/MCowNjKpVyo)) 
 * Xiaomi Mi 9 (See [official specsheet](https://www.mi.com/global/mi9/specs/)) (also supports GLONASS, Beidou and dual-frequency receiving)
@@ -157,7 +157,7 @@ Then tap on "Send feedback", and GPSTest it will capture success/failure for all
 
 ## Does GPSTest collect any personal information about me?
 
-No.  See our [Privacy Policy](https://github.com/barbeau/gpstest/wiki/Privacy-Policy) for more details.
+No.  See our [Privacy Policy](https://github.com/chesapeaketechnology/gpstest/wiki/Privacy-Policy) for more details.
 
 ## I'm getting a weird value for Time-to-First-Fix.  What's up?
 
@@ -187,6 +187,6 @@ If you do launch your own app, I would ask that you do the following when publis
 You can ask questions by:
 
 * Posting a messsage on the [gpstest_android Google Group](https://groups.google.com/forum/#!forum/gpstest_android)
-* Filing a issue on the [GPSTest Github issue tracker](https://github.com/barbeau/gpstest/blob/master/.github/CONTRIBUTING.md#issue-tracker)
+* Filing a issue on the [GPSTest Github issue tracker](https://github.com/chesapeaketechnology/gpstest/blob/master/.github/CONTRIBUTING.md#issue-tracker)
 * Posting a message to the [GPSTest Slack group](https://gpstest.slack.com).  Join via [this link](https://gpstest-android.herokuapp.com/).
 

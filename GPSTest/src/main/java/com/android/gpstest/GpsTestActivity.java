@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008-2018 The Android Open Source Project,
  * Sean J. Barbeau
+ * Copyright (C) 2019 Chesapeake Technology International
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +78,7 @@ import androidx.fragment.app.FragmentManager;
 
 import com.android.gpstest.io.FileLogger;
 import com.android.gpstest.map.MapConstants;
+import com.android.gpstest.io.FileLogger;
 import com.android.gpstest.util.GpsTestUtil;
 import com.android.gpstest.util.IOUtils;
 import com.android.gpstest.util.LocationUtils;
@@ -84,6 +86,7 @@ import com.android.gpstest.util.MathUtils;
 import com.android.gpstest.util.PermissionUtils;
 import com.android.gpstest.util.PreferenceUtils;
 import com.android.gpstest.util.UIUtils;
+import com.chesapeaketechnology.gnssmonkey.AbstractGPSMonkeyActivity;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -104,7 +107,7 @@ import static com.android.gpstest.util.GpsTestUtil.writeGnssMeasurementToAndroid
 import static com.android.gpstest.util.GpsTestUtil.writeNavMessageToAndroidStudio;
 import static com.android.gpstest.util.GpsTestUtil.writeNmeaToAndroidStudio;
 
-public class GpsTestActivity extends AppCompatActivity
+public class GpsTestActivity extends AbstractGPSMonkeyActivity
         implements LocationListener, SensorEventListener, NavigationDrawerFragment.NavigationDrawerCallbacks {
 
     private static final String TAG = "GpsTestActivity";
@@ -124,7 +127,7 @@ public class GpsTestActivity extends AppCompatActivity
     private static final int LOCATION_PERMISSION_REQUEST = 1;
 
     private static final String[] REQUIRED_PERMISSIONS = {
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
     static boolean mIsLargeScreen = false;
@@ -347,31 +350,24 @@ public class GpsTestActivity extends AppCompatActivity
             }
         }
         mBenchmarkController.onResume();
+
+
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (requestCode == UIUtils.PICKFILE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            // User picked a file to share from the Share dialog - update the dialog
-            if (data != null) {
-                Uri uri = data.getData();
-                Log.i(TAG, "Uri: " + uri.toString());
-                UIUtils.createShareDialog(this, mLastLocation, isFileLoggingEnabled(), mFileLogger, uri).show();
-            }
-        } else {
-            // See if this result was a scanned QR Code with a ground truth location
-            IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-            if (scanResult != null) {
-                String geoUri = scanResult.getContents();
-                Location l = IOUtils.getLocationFromGeoUri(geoUri);
-                if (l != null) {
-                    // Create a SHOW_RADAR intent out of the Geo URI and pass that to set ground truth
-                    Intent showRadar = IOUtils.createShowRadarIntent(l);
-                    recreateApp(showRadar);
-                } else {
-                    Toast.makeText(this, getString(R.string.qr_code_cannot_read_code),
-                            Toast.LENGTH_LONG).show();
-                }
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        // See if this result was a scanned QR Code with a ground truth location
+        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if (scanResult != null) {
+            String geoUri = scanResult.getContents();
+            Location l = IOUtils.getLocationFromGeoUri(geoUri);
+            if (l != null) {
+                // Create a SHOW_RADAR intent out of the Geo URI and pass that to set ground truth
+                Intent showRadar = IOUtils.createShowRadarIntent(l);
+                recreateApp(showRadar);
+            } else {
+                Toast.makeText(this, getString(R.string.qr_code_cannot_read_code),
+                        Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -511,8 +507,14 @@ public class GpsTestActivity extends AppCompatActivity
         super.onPause();
     }
 
+
     private boolean isFileLoggingEnabled() {
         return mWriteNmeaToFile || mWriteRawMeasurementsToFile || mWriteNavMessageToFile || mWriteLocationToFile;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
     }
 
     private void setupStartState(Bundle savedInstanceState) {
@@ -873,6 +875,13 @@ public class GpsTestActivity extends AppCompatActivity
             return;
         }
 
+//        if(mGrpcConnectionController == null) {
+//            mGrpcConnectionController = new GrpcConnectionController();
+//
+//        }
+//        Currently disabled.
+//        mGrpcConnectionController.connectToGrpcServer("192.168.1.46", 2621);
+
         if (!mStarted) {
             mLocationManager
                     .requestLocationUpdates(mProvider.getName(), minTime, minDistance, this);
@@ -900,6 +909,10 @@ public class GpsTestActivity extends AppCompatActivity
     }
 
     private synchronized void gpsStop() {
+
+//        if (mGrpcConnectionController != null) {
+//            mGrpcConnectionController.disconnectFromGrpcServer();
+//        }
         if (mLocationManager == null) {
             return;
         }
@@ -1384,12 +1397,18 @@ public class GpsTestActivity extends AppCompatActivity
             case R.id.gps_switch:
                 return true;
             case R.id.share:
-                share();
+                //share();
+                sendLocation();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
+
+//    @Override
+//    protected int getLayout() {
+//        return R.layout.activity_main;
+//    }
 
     public void onLocationChanged(Location location) {
         mLastLocation = location;
@@ -1527,6 +1546,11 @@ public class GpsTestActivity extends AppCompatActivity
 
     private void share() {
         UIUtils.createShareDialog(this, mLastLocation, isFileLoggingEnabled(), mFileLogger, null).show();
+    }
+        private void sendLocation() {
+//        GPSMonkeyService.shareFile();
+        //restart recording.
+//        GPSMonkeyService.getGeoPackageRecorder().startup();
     }
 
     /**
