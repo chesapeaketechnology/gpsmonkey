@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 
-
 import java.io.File;
 import java.util.UUID;
 
@@ -21,7 +20,7 @@ public class Config {
 
     private static Config instance = null;
     private String savedDir = null;
-    private boolean processEWonboard = false;
+    private boolean processEwOnboard = false;
     private SharedPreferences prefs = null;
     private String uuid = null;
     private Context context;
@@ -31,44 +30,45 @@ public class Config {
     private Config(Context context) {
         this.context = context;
         prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        processEWonboard = prefs.getBoolean(PREFS_PROCESS_EW,false);
-        if (prefs.getString(PREFS_UUID,null) == null) {
+        processEwOnboard = prefs.getBoolean(PREFS_PROCESS_EW, false);
+        if (prefs.getString(PREFS_UUID, null) == null) {
             SharedPreferences.Editor editor = prefs.edit();
             editor.apply();
         }
     }
 
     public static boolean isSosBroadcastEnabled(Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_SEND_TO_SOS,true);
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_SEND_TO_SOS, true);
     }
 
     public static boolean isIpcBroadcastEnabled(Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_BROADCAST,true);
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_BROADCAST, true);
     }
 
     public static boolean isSqAnBroadcastEnabled(Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_SQAN,true);
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_SQAN, true);
     }
 
     public void loadPrefs() {
-        gpsOnly = prefs.getBoolean(PREFS_GPS_ONLY,false);
+        gpsOnly = prefs.getBoolean(PREFS_GPS_ONLY, false);
     }
 
     public static Config getInstance(Context context) {
-        if (instance == null)
+        if (instance == null) {
             instance = new Config(context);
+        }
         return instance;
     }
 
-    public void setProcessEWonboard(boolean processEWonboard) {
-        this.processEWonboard = processEWonboard;
+    public void setProcessEwOnboard(boolean processEwOnboard) {
+        this.processEwOnboard = processEwOnboard;
         SharedPreferences.Editor edit = prefs.edit();
-        edit.putBoolean(PREFS_PROCESS_EW,processEWonboard);
+        edit.putBoolean(PREFS_PROCESS_EW, processEwOnboard);
         edit.commit();
     }
 
     public boolean isAutoShareEnabled() {
-        return prefs.getBoolean(PREFS_AUTO_SHARE,true);
+        return prefs.getBoolean(PREFS_AUTO_SHARE, true);
     }
 
     public static boolean isGpsOnly() {
@@ -77,19 +77,19 @@ public class Config {
 
     public void setGpsOnly(boolean gpsOnly) {
         Config.gpsOnly = gpsOnly;
-        prefs.edit().putBoolean(PREFS_GPS_ONLY,gpsOnly).commit();
+        prefs.edit().putBoolean(PREFS_GPS_ONLY, gpsOnly).commit();
     }
 
     public boolean processEWOnboard() {
-        return processEWonboard;
+        return processEwOnboard;
     }
 
     public String getUuid() {
         if (uuid == null) {
-            uuid = prefs.getString(PREFS_UUID,null);
+            uuid = prefs.getString(PREFS_UUID, null);
             if (uuid == null) {
                 uuid = UUID.randomUUID().toString();
-                prefs.edit().putString(PREFS_UUID,uuid).apply();
+                prefs.edit().putString(PREFS_UUID, uuid).apply();
             }
         }
         return uuid;
@@ -121,10 +121,11 @@ public class Config {
 
     public void setSavedDir(String savedDir) {
         SharedPreferences.Editor edit = prefs.edit();
-            if (savedDir == null)
-                edit.remove(PREFS_SAVE_DIR);
-            else
-                edit.putString(PREFS_SAVE_DIR,savedDir);
+        if (savedDir == null) {
+            edit.remove(PREFS_SAVE_DIR);
+        } else {
+            edit.putString(PREFS_SAVE_DIR, savedDir);
+        }
         edit.commit();
     }
 }

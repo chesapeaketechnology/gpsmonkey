@@ -71,9 +71,9 @@
                 android:value="com.android.gpstest.GpsTestActivity" />
         </activity>
         <activity
-                android:name="com.chesapeaketechnology.gnssmonkey.FailureActivity"
-                android:label="Failure" />
-        <service android:name="com.chesapeaketechnology.gnssmonkey.service.GPSMonkeyService" />
+            android:name="com.chesapeaketechnology.gnssmonkey.FailureActivity"
+            android:label="Failure" />
+        <service android:name="com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService" />
 
     </application>
 </manifest>
