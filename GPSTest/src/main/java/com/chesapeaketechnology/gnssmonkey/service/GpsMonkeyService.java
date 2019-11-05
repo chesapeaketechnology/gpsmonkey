@@ -26,7 +26,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-
 import com.android.gpstest.Application;
 import com.android.gpstest.GpsTestListener;
 import com.android.gpstest.R;
@@ -34,18 +33,16 @@ import com.chesapeaketechnology.gnssmonkey.FailureActivity;
 
 import java.io.File;
 
-
-import static com.chesapeaketechnology.gnssmonkey.service.GPSMonkeyService.InputSourceType.LOCAL;
-import static com.chesapeaketechnology.gnssmonkey.service.GPSMonkeyService.InputSourceType.LOCAL_FILE;
-
+import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL;
+import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL_FILE;
 
 /**
  * GPSMonkey service listens for updates from the GPS receiver and stores in TORGI compliant GeoPackage format."
  */
-public class GPSMonkeyService extends Service {
+public class GpsMonkeyService extends Service {
 
+    public enum InputSourceType {LOCAL, LOCAL_FILE}
 
-    public enum InputSourceType {LOCAL,LOCAL_FILE};
     private final static String TAG = "GPSMonkeySvc";
     private final static int GPSMonkey_NOTIFICATION_ID = 1;
 
@@ -59,9 +56,8 @@ public class GPSMonkeyService extends Service {
     private SharedPreferences.OnSharedPreferenceChangeListener prefChangeListener;
 
     private long firstGpsAcqTime = Long.MIN_VALUE;
-    private final static long TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE = 1000l * 15l; //time to wait between first location measurement received and considering this device does not likely support raw GNSS collection
+    private final static long TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE = 1000L * 15L; //time to wait between first location measurement received and considering this device does not likely support raw GNSS collection
     private boolean gnssRawSupportKnown = false;
-
 
     public void setListener(GpsTestListener listener) {
         this.listener = listener;
@@ -70,7 +66,7 @@ public class GPSMonkeyService extends Service {
     private LocationManager locMgr = null;
     private GpsTestListener listener = null;
 
-    private final IBinder mBinder = new GPSMonkeyBinder();
+    private final IBinder mBinder = new GpsMonkeyBinder();
 
     public GeoPackageRecorder getGeoPackageRecorder() {
         return geoPackageRecorder;
@@ -78,7 +74,6 @@ public class GPSMonkeyService extends Service {
 
     public void start() {
         start(inputSourceType);
-
     }
 
     public void start(InputSourceType inputSourceType) {
@@ -101,18 +96,21 @@ public class GPSMonkeyService extends Service {
                 }
 
                 locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locListener);
-                if (inputSourceType == LOCAL)
+                if (inputSourceType == LOCAL) {
                     currentLocation = locMgr.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                }
             } else {
                 if (inputSourceType == LOCAL) {
                     currentLocation = locMgr.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (listener != null)
+                    if (listener != null) {
                         listener.onLocationChanged(currentLocation);
+                    }
                 }
             }
             if (inputSourceType == LOCAL_FILE) {
-                if (geoPackageRecorder != null)
+                if (geoPackageRecorder != null) {
                     geoPackageRecorder.shutdown();
+                }
             } else {
                 if (geoPackageRecorder == null) {
                     geoPackageRecorder = new GeoPackageRecorder(this);
@@ -123,15 +121,16 @@ public class GPSMonkeyService extends Service {
         }
     }
 
-
-
     private final GnssStatus.Callback statusListener = new GnssStatus.Callback() {
         public void onSatelliteStatusChanged(final GnssStatus status) {
             if (inputSourceType == LOCAL) {
-                if (geoPackageRecorder != null)
+                if (geoPackageRecorder != null) {
                     geoPackageRecorder.onSatelliteStatusChanged(status);
-                if (listener != null)
+                }
+
+                if (listener != null) {
                     listener.onSatelliteStatusChanged(status);
+                }
             }
         }
     };
@@ -140,21 +139,23 @@ public class GPSMonkeyService extends Service {
         public void onGnssMeasurementsReceived(GnssMeasurementsEvent event) {
             gnssRawSupportKnown = true;
             if (inputSourceType == LOCAL) {
-                if (geoPackageRecorder != null)
+                if (geoPackageRecorder != null) {
                     geoPackageRecorder.onGnssMeasurementsReceived(event);
+                }
             }
         }
     };
 
-
     public void updateLocation(final Location loc) {
 
-            currentLocation = loc;
-        if (geoPackageRecorder != null)
+        currentLocation = loc;
+        if (geoPackageRecorder != null) {
             geoPackageRecorder.onLocationChanged(loc);
-        if (listener != null)
-            listener.onLocationChanged(loc);
+        }
 
+        if (listener != null) {
+            listener.onLocationChanged(loc);
+        }
     }
 
     private LocationListener locListener = new LocationListener() {
@@ -168,18 +169,20 @@ public class GPSMonkeyService extends Service {
 //                listener.onProviderChanged(provider, false);
         }
 
-        public void onStatusChanged(final String provider, int status, Bundle extras) {}
+        public void onStatusChanged(final String provider, int status, Bundle extras) {
+        }
 
         private boolean hasGnssRawFailureNagLaunched = false;
+
         public void onLocationChanged(final Location loc) {
             if (inputSourceType == LOCAL) {
                 updateLocation(loc);
                 if (!gnssRawSupportKnown && !hasGnssRawFailureNagLaunched) {
-                    if (firstGpsAcqTime < 0l)
+                    if (firstGpsAcqTime < 0L) {
                         firstGpsAcqTime = System.currentTimeMillis();
-                    else if (System.currentTimeMillis() > firstGpsAcqTime + TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE) {
+                    } else if (System.currentTimeMillis() > firstGpsAcqTime + TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE) {
                         hasGnssRawFailureNagLaunched = true;
-                        startActivity(new Intent(GPSMonkeyService.this, FailureActivity.class));
+                        startActivity(new Intent(GpsMonkeyService.this, FailureActivity.class));
                     }
                 }
             }
@@ -191,7 +194,6 @@ public class GPSMonkeyService extends Service {
      */
     public void shutdown() {
         stopSelf();
-
     }
 
     @Nullable
@@ -206,10 +208,11 @@ public class GPSMonkeyService extends Service {
         super.onCreate();
         createNotificationChannel();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        int inputModeIndex = prefs.getInt(PREFS_CURRENT_INPUT_MODE,0);
+        int inputModeIndex = prefs.getInt(PREFS_CURRENT_INPUT_MODE, 0);
         InputSourceType[] sources = InputSourceType.values();
-        if ((inputModeIndex >= 0) && (inputModeIndex < sources.length))
+        if ((inputModeIndex >= 0) && (inputModeIndex < sources.length)) {
             inputSourceType = sources[inputModeIndex];
+        }
     }
 
     @Override
@@ -223,8 +226,9 @@ public class GPSMonkeyService extends Service {
                 locMgr.unregisterGnssMeasurementsCallback(measurementListener);
                 locMgr.unregisterGnssStatusCallback(statusListener);
             }
-            if (locListener != null)
+            if (locListener != null) {
                 locMgr.removeUpdates(locListener);
+            }
             locMgr = null;
         }
 
@@ -233,13 +237,14 @@ public class GPSMonkeyService extends Service {
         super.onDestroy();
     }
 
-    public void shareFile(){
+    public void shareFile() {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.cancelAll();
 
         String dbFile = null;
-        if (geoPackageRecorder != null)
+        if (geoPackageRecorder != null) {
             dbFile = geoPackageRecorder.shutdown();
+        }
         if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), true)) {
             File file = new File(dbFile);
             if (file.exists()) {
@@ -248,18 +253,14 @@ public class GPSMonkeyService extends Service {
                 intentShareFile.putExtra(Intent.EXTRA_STREAM,
                         FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".geopackage.provider", file));
                 intentShareFile.putExtra(Intent.EXTRA_SUBJECT, file.getName());
-                intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_ACTIVITY_NEW_TASK);
+                intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
                     startActivity(intentShareFile);
                 } catch (ActivityNotFoundException ignore) {
                 }
             }
-
         }
-
-
     }
-
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -267,7 +268,7 @@ public class GPSMonkeyService extends Service {
             if (intent != null) {
                 String action = intent.getAction();
                 if (ACTION_STOP.equalsIgnoreCase(action)) {
-                    Log.d(TAG, "Shutting down GPSMonkeyService");
+                    Log.d(TAG, "Shutting down GpsMonkeyService");
                     stopSelf();
                     return START_NOT_STICKY;
                 }
@@ -276,9 +277,9 @@ public class GPSMonkeyService extends Service {
         }
     }
 
-    public class GPSMonkeyBinder extends Binder {
-        public GPSMonkeyService getService() {
-            return GPSMonkeyService.this;
+    public class GpsMonkeyBinder extends Binder {
+        public GpsMonkeyService getService() {
+            return GpsMonkeyService.this;
         }
     }
 
@@ -311,18 +312,17 @@ public class GPSMonkeyService extends Service {
                 builder.setContentText(getResources().getString(R.string.notification));
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder.setChannelId(NOTIFICATION_CHANNEL);
+        }
 
-        Intent intentStop = new Intent(this, GPSMonkeyService.class);
+        Intent intentStop = new Intent(this, GpsMonkeyService.class);
         intentStop.setAction(ACTION_STOP);
         PendingIntent pIntentShutdown = PendingIntent.getService(this, 0, intentStop, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.addAction(android.R.drawable.ic_lock_power_off, "Stop GPSMonkey", pIntentShutdown);
 
         startForeground(GPSMonkey_NOTIFICATION_ID, builder.build());
     }
-
-
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -336,10 +336,7 @@ public class GPSMonkeyService extends Service {
         }
     }
 
-
     public Location getCurrentLocation() {
         return currentLocation;
     }
-
-
 }

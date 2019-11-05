@@ -16,17 +16,18 @@ public class FailureActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_failure);
         View buttonOk = findViewById(R.id.failureButton);
-        if (buttonOk != null)
+        if (buttonOk != null) {
             buttonOk.setOnClickListener(v -> finish());
+        }
         View buttonUninstall = findViewById(R.id.failureUninstallButton);
-        if (buttonUninstall != null)
+        if (buttonUninstall != null) {
             buttonUninstall.setOnClickListener(v -> {
-                Uri packageUri = Uri.parse("package:"+ FailureActivity.this.getPackageName());
+                Uri packageUri = Uri.parse("package:" + FailureActivity.this.getPackageName());
                 try {
                     startActivity(new Intent(Intent.ACTION_UNINSTALL_PACKAGE, packageUri));
                 } catch (ActivityNotFoundException ignore) {
                 }
-
             });
+        }
     }
 }

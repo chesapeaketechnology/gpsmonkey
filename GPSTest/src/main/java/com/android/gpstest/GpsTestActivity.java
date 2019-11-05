@@ -67,7 +67,6 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
@@ -78,7 +77,6 @@ import androidx.fragment.app.FragmentManager;
 
 import com.android.gpstest.io.FileLogger;
 import com.android.gpstest.map.MapConstants;
-import com.android.gpstest.io.FileLogger;
 import com.android.gpstest.util.GpsTestUtil;
 import com.android.gpstest.util.IOUtils;
 import com.android.gpstest.util.LocationUtils;
@@ -86,7 +84,7 @@ import com.android.gpstest.util.MathUtils;
 import com.android.gpstest.util.PermissionUtils;
 import com.android.gpstest.util.PreferenceUtils;
 import com.android.gpstest.util.UIUtils;
-import com.chesapeaketechnology.gnssmonkey.AbstractGPSMonkeyActivity;
+import com.chesapeaketechnology.gnssmonkey.AbstractGpsMonkeyActivity;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -107,7 +105,7 @@ import static com.android.gpstest.util.GpsTestUtil.writeGnssMeasurementToAndroid
 import static com.android.gpstest.util.GpsTestUtil.writeNavMessageToAndroidStudio;
 import static com.android.gpstest.util.GpsTestUtil.writeNmeaToAndroidStudio;
 
-public class GpsTestActivity extends AbstractGPSMonkeyActivity
+public class GpsTestActivity extends AbstractGpsMonkeyActivity
         implements LocationListener, SensorEventListener, NavigationDrawerFragment.NavigationDrawerCallbacks {
 
     private static final String TAG = "GpsTestActivity";
@@ -270,7 +268,7 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
 //            setContentView(R.layout.activity_main_large_screen);
 //            mIsLargeScreen = true;
 //        } else {
-            setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
 //        }
 
         mBenchmarkController = new BenchmarkControllerImpl(this, findViewById(R.id.mainlayout));
@@ -320,10 +318,10 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
         // Set up the drawer.
         mNavigationDrawerFragment.setUp(
                 R.id.navigation_drawer,
-                (DrawerLayout) findViewById(R.id.nav_drawer_left_pane));
+                findViewById(R.id.nav_drawer_left_pane));
     }
 
-     @Override
+    @Override
     public void onSaveInstanceState(Bundle outState) {
         // Save current GPS started state
         outState.putBoolean(GPS_STARTED, mStarted);
@@ -350,8 +348,6 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
             }
         }
         mBenchmarkController.onResume();
-
-
     }
 
     @Override
@@ -454,7 +450,7 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
         }
 
         /**
-         * Check preferences to see how these componenets should be initialized
+         * Check preferences to see how these components should be initialized
          */
         SharedPreferences settings = Application.getPrefs();
 
@@ -506,7 +502,6 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
 
         super.onPause();
     }
-
 
     private boolean isFileLoggingEnabled() {
         return mWriteNmeaToFile || mWriteRawMeasurementsToFile || mWriteNavMessageToFile || mWriteLocationToFile;
@@ -1274,11 +1269,11 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
 
     private void checkKeepScreenOn(SharedPreferences settings) {
 //        if (!mIsLargeScreen) {
-            if (settings.getBoolean(getString(R.string.pref_key_keep_screen_on), true)) {
-                mToolbar.setKeepScreenOn(true);
-            } else {
-                mToolbar.setKeepScreenOn(false);
-            }
+        if (settings.getBoolean(getString(R.string.pref_key_keep_screen_on), true)) {
+            mToolbar.setKeepScreenOn(true);
+        } else {
+            mToolbar.setKeepScreenOn(false);
+        }
 //        } else {
 //            // TODO - After we fix large screen devices in #122, we can delete the below block and
 //            // use the above block with mToolbar.setKeepScreenOn() for all screen sizes
@@ -1547,10 +1542,11 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
     private void share() {
         UIUtils.createShareDialog(this, mLastLocation, isFileLoggingEnabled(), mFileLogger, null).show();
     }
-        private void sendLocation() {
-//        GPSMonkeyService.shareFile();
+
+    private void sendLocation() {
+//        GpsMonkeyService.shareFile();
         //restart recording.
-//        GPSMonkeyService.getGeoPackageRecorder().startup();
+//        GpsMonkeyService.getGeoPackageRecorder().startup();
     }
 
     /**
@@ -1695,15 +1691,15 @@ public class GpsTestActivity extends AbstractGPSMonkeyActivity
                             }
                         }
                 )
-            .setNegativeButton(R.string.exit,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        // Exit app
-                        finish();
-                    }
-                }
-        );
+                .setNegativeButton(R.string.exit,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // Exit app
+                                finish();
+                            }
+                        }
+                );
         builder.create().show();
     }
 }

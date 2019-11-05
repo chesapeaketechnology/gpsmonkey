@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -24,51 +23,51 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-
 import com.android.gpstest.GpsTestListener;
 import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.service.GPSMonkeyService;
+import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
 
 import java.util.ArrayList;
 
-public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
+public abstract class AbstractGpsMonkeyActivity extends AppCompatActivity {
     protected static final int REQUEST_DISABLE_BATTERY_OPTIMIZATION = 401;
     protected final static String TAG = "GPSMonkey.monitor";
     private final static String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private final static int PERM_REQUEST_CODE = 1;
     protected boolean serviceBound = false;
-    protected GPSMonkeyService GPSMonkeyService = null;
+    protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //        permissionsPassed = checkPermissions();
 //        if (permissionsPassed)
-            startService();
+        startService();
 //        openBatteryOptimizationDialogIfNeeded();
-    };
+    }
 
     @Override
     protected void onResume() {
         super.onResume();
         if (this instanceof GpsTestListener) {
-            if (serviceBound && (GPSMonkeyService != null))
-                GPSMonkeyService.setListener((GpsTestListener) this);
+            if (serviceBound && (gpsMonkeyService != null)) {
+                gpsMonkeyService.setListener((GpsTestListener) this);
+            }
         }
-
     }
 
     @Override
     protected void onPause() {
-        if (GPSMonkeyService != null)
-            GPSMonkeyService.setListener(null);
+        if (gpsMonkeyService != null) {
+            gpsMonkeyService.setListener(null);
+        }
         super.onPause();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (serviceBound && (GPSMonkeyService != null)) {
+        if (serviceBound && (gpsMonkeyService != null)) {
             try {
                 unbindService(mConnection);
             } catch (Exception e) {
@@ -80,9 +79,9 @@ public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
     protected ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
-            Log.d(TAG,"GNSS Service bound to this activity");
-            GPSMonkeyService.GPSMonkeyBinder binder = (GPSMonkeyService.GPSMonkeyBinder) service;
-            GPSMonkeyService = binder.getService();
+            Log.d(TAG, "GNSS Service bound to this activity");
+            GpsMonkeyService.GpsMonkeyBinder binder = (GpsMonkeyService.GpsMonkeyBinder) service;
+            gpsMonkeyService = binder.getService();
             serviceBound = true;
             onGPSMonkeyServiceConnected();
         }
@@ -94,16 +93,17 @@ public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
     };
 
     protected void onGPSMonkeyServiceConnected() {
-        if (this instanceof GpsTestListener)
-            GPSMonkeyService.setListener((GpsTestListener)this);
+        if (this instanceof GpsTestListener) {
+            gpsMonkeyService.setListener((GpsTestListener) this);
+        }
     }
 
     private void startService() {
-        if (serviceBound)
-            GPSMonkeyService.start();
-        else {
-            startService(new Intent(this, GPSMonkeyService.class));
-            Intent intent = new Intent(this, GPSMonkeyService.class);
+        if (serviceBound) {
+            gpsMonkeyService.start();
+        } else {
+            startService(new Intent(this, GpsMonkeyService.class));
+            Intent intent = new Intent(this, GpsMonkeyService.class);
             bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
         }
     }
@@ -137,19 +137,20 @@ public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             final PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
             return pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName());
-        } else
+        } else {
             return false;
+        }
     }
 
     private boolean isAllowAskAboutBattery() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        return !prefs.getBoolean(PREF_BATTERY_OPT_IGNORE,false);
+        return !prefs.getBoolean(PREF_BATTERY_OPT_IGNORE, false);
     }
 
     private void setNeverAskBatteryOptimize() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         SharedPreferences.Editor edit = prefs.edit();
-        edit.putBoolean(PREF_BATTERY_OPT_IGNORE,true);
+        edit.putBoolean(PREF_BATTERY_OPT_IGNORE, true);
         edit.apply();
     }
 
@@ -164,7 +165,7 @@ public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == PERM_REQUEST_CODE) {
             if (checkPermissions()) {
                 permissionsPassed = true;
@@ -176,24 +177,28 @@ public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
     }
 
     /**
-     * Returns true once all required permissions are granted, otherwise returns false and requests the
-     * required permission
-     * @return
+     * @return true once all required permissions are granted, otherwise returns false and requests the
+     * required permission(s).
      */
     private boolean checkPermissions() {
         ArrayList<String> needed = new ArrayList<>();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        if (needed.isEmpty())
+        }
+
+        if (needed.isEmpty()) {
             return true;
-        else {
+        } else {
             String[] perms = new String[needed.size()];
             perms = new String[perms.length];
-            for (int i=0;i<perms.length;i++) {
+            for (int i = 0; i < perms.length; i++) {
                 perms[i] = needed.get(i);
             }
+
             ActivityCompat.requestPermissions(this, perms, PERM_REQUEST_CODE);
             return false;
         }
@@ -204,18 +209,13 @@ public abstract class AbstractGPSMonkeyActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.quit_GPSMonkey)
                 .setMessage(R.string.quit_GPSMonkey_narrative)
-                .setNegativeButton(R.string.quit_yes, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (serviceBound && (GPSMonkeyService != null))
-                            GPSMonkeyService.shutdown();
-                        AbstractGPSMonkeyActivity.this.finish();
+                .setNegativeButton(R.string.quit_yes, (dialog, which) -> {
+                    if (serviceBound && (gpsMonkeyService != null)) {
+                        gpsMonkeyService.shutdown();
                     }
+                    AbstractGpsMonkeyActivity.this.finish();
                 })
-                .setPositiveButton(R.string.quit_run_in_background, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface arg0, int arg1) {
-                        AbstractGPSMonkeyActivity.this.finish();
-                    }
-                }).create().show();
+                .setPositiveButton(R.string.quit_run_in_background,
+                        (arg0, arg1) -> AbstractGpsMonkeyActivity.this.finish()).create().show();
     }
 }
