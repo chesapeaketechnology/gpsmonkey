@@ -84,7 +84,7 @@ import com.android.gpstest.util.MathUtils;
 import com.android.gpstest.util.PermissionUtils;
 import com.android.gpstest.util.PreferenceUtils;
 import com.android.gpstest.util.UIUtils;
-import com.chesapeaketechnology.gnssmonkey.AbstractGpsMonkeyActivity;
+import com.chesapeaketechnology.gnssmonkey.AGpsMonkeyActivity;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -105,7 +105,7 @@ import static com.android.gpstest.util.GpsTestUtil.writeGnssMeasurementToAndroid
 import static com.android.gpstest.util.GpsTestUtil.writeNavMessageToAndroidStudio;
 import static com.android.gpstest.util.GpsTestUtil.writeNmeaToAndroidStudio;
 
-public class GpsTestActivity extends AbstractGpsMonkeyActivity
+public class GpsTestActivity extends AGpsMonkeyActivity
         implements LocationListener, SensorEventListener, NavigationDrawerFragment.NavigationDrawerCallbacks {
 
     private static final String TAG = "GpsTestActivity";

@@ -9,32 +9,26 @@ import java.io.File;
 import java.util.UUID;
 
 public class Config {
-    public final static String PREFS_SAVE_DIR = "savedir";
-    public final static String PREFS_AUTO_SHARE = "autoshare";
-    public final static String PREFS_PROCESS_EW = "processew";
-    public final static String PREFS_UUID = "callsign";
-    public final static String PREFS_GPS_ONLY = "gpsonly";
-    public final static String PREFS_BROADCAST = "broadcast";
-    public final static String PREFS_SQAN = "sqan";
-    public final static String PREFS_SEND_TO_SOS = "sendtosos";
+    public static final String PREFS_SAVE_DIR = "savedir";
+    public static final String PREFS_AUTO_SHARE = "autoshare";
+    public static final String PREFS_PROCESS_EW = "processew";
+    public static final String PREFS_UUID = "callsign";
+    public static final String PREFS_GPS_ONLY = "gpsonly";
+    public static final String PREFS_BROADCAST = "broadcast";
+    public static final String PREFS_SQAN = "sqan";
+    public static final String PREFS_SEND_TO_SOS = "sendtosos";
 
-    private static Config instance = null;
-    private String savedDir = null;
-    private boolean processEwOnboard = false;
-    private SharedPreferences prefs = null;
-    private String uuid = null;
-    private Context context;
-    private String remoteIP = null;
     private static boolean gpsOnly = false;
+    private static Config instance = null;
 
-    private Config(Context context) {
-        this.context = context;
-        prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        processEwOnboard = prefs.getBoolean(PREFS_PROCESS_EW, false);
-        if (prefs.getString(PREFS_UUID, null) == null) {
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.apply();
-        }
+    private String savedDir = null;
+    private boolean processEwOnboard;
+    private SharedPreferences prefs;
+    private String uuid = null;
+    private String remoteIP = null;
+
+    public static boolean isGpsOnly() {
+        return gpsOnly;
     }
 
     public static boolean isSosBroadcastEnabled(Context context) {
@@ -49,15 +43,24 @@ public class Config {
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_SQAN, true);
     }
 
-    public void loadPrefs() {
-        gpsOnly = prefs.getBoolean(PREFS_GPS_ONLY, false);
-    }
-
     public static Config getInstance(Context context) {
         if (instance == null) {
             instance = new Config(context);
         }
         return instance;
+    }
+
+    private Config(Context context) {
+        prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        processEwOnboard = prefs.getBoolean(PREFS_PROCESS_EW, false);
+        if (prefs.getString(PREFS_UUID, null) == null) {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.apply();
+        }
+    }
+
+    public void loadPrefs() {
+        gpsOnly = prefs.getBoolean(PREFS_GPS_ONLY, false);
     }
 
     public void setProcessEwOnboard(boolean processEwOnboard) {
@@ -69,10 +72,6 @@ public class Config {
 
     public boolean isAutoShareEnabled() {
         return prefs.getBoolean(PREFS_AUTO_SHARE, true);
-    }
-
-    public static boolean isGpsOnly() {
-        return gpsOnly;
     }
 
     public void setGpsOnly(boolean gpsOnly) {
@@ -112,6 +111,8 @@ public class Config {
                 savedDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();*/
             if (savedDir == null) {
                 File folder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "GPSMonkey");
+
+                //noinspection ResultOfMethodCallIgnored
                 folder.mkdirs();
                 savedDir = folder.getAbsolutePath();
             }

@@ -75,58 +75,67 @@ import static mil.nga.geopackage.db.GeoPackageDataType.TEXT;
  * Saves GNSS data into a GeoPackage
  */
 public class GeoPackageRecorder extends HandlerThread {
-    private final static String TAG = "GPSMonkey.GpkgRec";
-    private Handler handler;
-    private final Context context;
-    private AtomicBoolean ready = new AtomicBoolean(false);
+    private static final String TAG = "GPSMonkey.GpkgRec";
+    private static final String SENSOR_TIME = "time";
+    private static final String SENSOR_ACCEL_X = "accel_x";
+    private static final String SENSOR_ACCEL_Y = "accel_y";
+    private static final String SENSOR_ACCEL_Z = "accel_z";
+    private static final String SENSOR_LINEAR_ACCEL_X = "linear_accel_x";
+    private static final String SENSOR_LINEAR_ACCEL_Y = "linear_accel_y";
+    private static final String SENSOR_LINEAR_ACCEL_Z = "linear_accel_z";
+    private static final String SENSOR_MAG_X = "mag_x";
+    private static final String SENSOR_MAG_Y = "mag_y";
+    private static final String SENSOR_MAG_Z = "mag_z";
+    private static final String SENSOR_GYRO_X = "gyro_x";
+    private static final String SENSOR_GYRO_Y = "gyro_y";
+    private static final String SENSOR_GYRO_Z = "gyro_z";
+    private static final String SENSOR_GRAVITY_X = "gravity_x";
+    private static final String SENSOR_GRAVITY_Y = "gravity_y";
+    private static final String SENSOR_GRAVITY_Z = "gravity_z";
+    private static final String SENSOR_ROT_VEC_X = "rot_vec_x";
+    private static final String SENSOR_ROT_VEC_Y = "rot_vec_y";
+    private static final String SENSOR_ROT_VEC_Z = "rot_vec_z";
+    private static final String SENSOR_ROT_VEC_COS = "rot_vec_cos";
+    private static final String SENSOR_ROT_VEC_HDG_ACC = "rot_vec_hdg_acc";
+    private static final String SENSOR_BARO = "baro";
+    private static final String SENSOR_HUMIDITY = "humidity";
+    private static final String SENSOR_TEMP = "temp";
+    private static final String SENSOR_LUX = "lux";
+    private static final String SENSOR_PROX = "prox";
+    private static final String SENSOR_STATIONARY = "stationary";
+    private static final String SENSOR_MOTION = "motion";
 
-    private final static String SENSOR_TIME = "time";
-    private final static String SENSOR_ACCEL_X = "accel_x";
-    private final static String SENSOR_ACCEL_Y = "accel_y";
-    private final static String SENSOR_ACCEL_Z = "accel_z";
-    private final static String SENSOR_LINEAR_ACCEL_X = "linear_accel_x";
-    private final static String SENSOR_LINEAR_ACCEL_Y = "linear_accel_y";
-    private final static String SENSOR_LINEAR_ACCEL_Z = "linear_accel_z";
-    private final static String SENSOR_MAG_X = "mag_x";
-    private final static String SENSOR_MAG_Y = "mag_y";
-    private final static String SENSOR_MAG_Z = "mag_z";
-    private final static String SENSOR_GYRO_X = "gyro_x";
-    private final static String SENSOR_GYRO_Y = "gyro_y";
-    private final static String SENSOR_GYRO_Z = "gyro_z";
-    private final static String SENSOR_GRAVITY_X = "gravity_x";
-    private final static String SENSOR_GRAVITY_Y = "gravity_y";
-    private final static String SENSOR_GRAVITY_Z = "gravity_z";
-    private final static String SENSOR_ROT_VEC_X = "rot_vec_x";
-    private final static String SENSOR_ROT_VEC_Y = "rot_vec_y";
-    private final static String SENSOR_ROT_VEC_Z = "rot_vec_z";
-    private final static String SENSOR_ROT_VEC_COS = "rot_vec_cos";
-    private final static String SENSOR_ROT_VEC_HDG_ACC = "rot_vec_hdg_acc";
-    private final static String SENSOR_BARO = "baro";
-    private final static String SENSOR_HUMIDITY = "humidity";
-    private final static String SENSOR_TEMP = "temp";
-    private final static String SENSOR_LUX = "lux";
-    private final static String SENSOR_PROX = "prox";
-    private final static String SENSOR_STATIONARY = "stationary";
-    private final static String SENSOR_MOTION = "motion";
+    private static final String SAT_DATA_MEASURED_TIME = "local_time";
+    private static final String SAT_DATA_SVID = "svid";
+    private static final String SAT_DATA_CONSTELLATION = "constellation";
+    private static final String SAT_DATA_CN0 = "cn0";
+    private static final String SAT_DATA_AGC = "agc";
 
-    private final static String SAT_DATA_MEASURED_TIME = "local_time";
-    private final static String SAT_DATA_SVID = "svid";
-    private final static String SAT_DATA_CONSTELLATION = "constellation";
-    private final static String SAT_DATA_CN0 = "cn0";
-    private final static String SAT_DATA_AGC = "agc";
+    private static final String GPS_OBS_PT_LAT = "Lat";
+    private static final String GPS_OBS_PT_LNG = "Lon";
+    private static final String GPS_OBS_PT_ALT = "Alt";
+    private static final String GPS_OBS_PT_GPS_TIME = "GPSTime";
+    private static final String GPS_OBS_PT_PROB_RFI = "ProbabilityRFI";
+    private static final String GPS_OBS_PT_PROB_CN0AGC = "ProbSpoofCN0AGC";
+    private static final String GPS_OBS_PT_PROB_CONSTELLATION = "ProbSpoofConstellation";
 
-    private final static String GPS_OBS_PT_LAT = "Lat";
-    private final static String GPS_OBS_PT_LNG = "Lon";
-    private final static String GPS_OBS_PT_ALT = "Alt";
-    private final static String GPS_OBS_PT_GPS_TIME = "GPSTime";
-    private final static String GPS_OBS_PT_PROB_RFI = "ProbabilityRFI";
-    private final static String GPS_OBS_PT_PROB_CN0AGC = "ProbSpoofCN0AGC";
-    private final static String GPS_OBS_PT_PROB_CONSTELLATION = "ProbSpoofConstellation";
+    private static final long WGS84_SRS = 4326;
+
+    private static final String ID_COLUMN = "id";
+    private static final String GEOMETRY_COLUMN = "geom";
+
+    private static final String ptsTableName = "gps_observation_points";
+    private static final String satTblName = "sat_data";
+    private static final String clkTblName = "rcvr_clock";
+    private static final String motionTblName = "motion";
+    private static final String satMapTblName = ptsTableName + "_" + satTblName;
+    private static final String clkMapTblName = satTblName + "_" + clkTblName;
+    private static final String motionMapTblName = ptsTableName + "_" + motionTblName;
 
     @SuppressWarnings("SpellCheckingInspection")
-    private final static SimpleDateFormat fmtFilenameFriendlyTime = new SimpleDateFormat("YYYYMMdd-HHmmss", Locale.US);
+    private static final SimpleDateFormat fmtFilenameFriendlyTime = new SimpleDateFormat("YYYYMMdd-HHmmss", Locale.US);
 
-    private HashMap<Integer, String> SatType = new HashMap<Integer, String>() {
+    private static final HashMap<Integer, String> satType = new HashMap<Integer, String>() {
         {
             put(0, "Unknown");
             put(1, "GPS");
@@ -138,71 +147,16 @@ public class GeoPackageRecorder extends HandlerThread {
         }
     };
 
-    protected GeoPackageRecorder(Context context) {
-        super("GeoPkgRcdr");
-        this.context = context;
-    }
-
-    public void startup() {
-        onLooperPrepared();
-    }
-
-    @Override
-    protected void onLooperPrepared() {
-        handler = new Handler();
-        if (gpsGpkg == null) {
-            String fileFolder = Config.getInstance(context).getSavedDir();
-            if (fileFolder != null) {
-                File file = new File(fileFolder);
-                if (!"GPSMonkey".equalsIgnoreCase(file.getName())) {
-                    File GPSMonkey = new File(file, "GPSMonkey");
-                    GPSMonkey.mkdirs();
-                    GPSMonkey.setReadable(true);
-                    gpkgFolder = GPSMonkey.getPath();
-                } else {
-                    if (file.exists()) {
-                        gpkgFolder = fileFolder;
-                    }
-                }
-            }
-            if (gpkgFolder == null) {
-                Log.e(TAG, "Unable to find GPSMonkey storage location");
-                gpkgFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-            }
-            try {
-                gpsGpkg = setupGpkgDB(context, gpkgFolder, gpkgFilename);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-
-        List<String> tbls = gpsGpkg.getTables();
-        tbls.add(gpsGpkg.getApplicationId());
-        ready.set(true);
-    }
-
-    final static long WGS84_SRS = 4326;
-
-    private static final String ID_COLUMN = "id";
-    private static final String GEOMETRY_COLUMN = "geom";
+    private final Context context;
+    private Handler handler;
+    private AtomicBoolean ready = new AtomicBoolean(false);
 
     private String gpkgFilename = "GNSS-MONKEY";
     private String gpkgFolder = null;
-
-    private static final String PtsTableName = "gps_observation_points";
-    private static final String satTblName = "sat_data";
-    private static final String clkTblName = "rcvr_clock";
-    private static final String motionTblName = "motion";
-    private static final String satMapTblName = PtsTableName + "_" + satTblName;
-    private static final String clkMapTblName = satTblName + "_" + clkTblName;
-    private static final String motionMapTblName = PtsTableName + "_" + motionTblName;
-
     private GeoPackage gpkg = null;
-
     private HashMap<String, SatelliteStatus> satStatus = new HashMap<>();
     private HashMap<String, GnssMeasurement> satInfo = new HashMap<>();
     private HashMap<String, Long> satRowsToMap = new HashMap<>();
-
     private GeoPackage gpsGpkg = null;
     private RelatedTablesExtension RTE = null;
     private ExtendedRelation satExtRel = null;
@@ -211,75 +165,9 @@ public class GeoPackageRecorder extends HandlerThread {
     private UserTable satTable = null;
     private UserTable clkTable = null;
 
-    private void removeTempFiles() {
-        try {
-            String dirPath = Config.getInstance(context).getSavedDir();
-            if (dirPath != null) {
-                File dir = new File(dirPath);
-                if (dir.exists()) {
-                    File[] files = dir.listFiles();
-                    if ((files != null) && (files.length > 0)) {
-                        for (File file : files) {
-                            String fileName = file.getName();
-                            if ((fileName != null) && fileName.endsWith("-journal")) {
-                                file.delete();
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignore) {
-        }
-    }
-
-    /**
-     * Shuts down the recorder and provides the file path for the database
-     *
-     * @return The gpkg filename.
-     */
-    public String shutdown() {
-        Toast.makeText(context, context.getString(R.string.data_saved_location) + Config.getInstance(context).getSavedDir(), Toast.LENGTH_LONG).show();
-        Log.d(TAG, "GeoPackageRecorder.shutdown()");
-        ready.set(false);
-        getLooper().quit();
-        if (gpsGpkg != null) {
-            gpsGpkg.close();
-            gpsGpkg = null;
-        }
-        removeTempFiles();
-        return gpkgFilename;
-    }
-
-    public void onSatelliteStatusChanged(final GnssStatus status) {
-        if (ready.get() && (handler != null)) {
-            handler.post(() -> {
-                try {
-                    int numSats = status.getSatelliteCount();
-
-                    for (int i = 0; i < numSats; ++i) {
-
-                        SatelliteStatus thisSat = new SatelliteStatus(status.getSvid(i), GpsTestUtil.getGnssConstellationType(status.getConstellationType(i)),
-                                status.getCn0DbHz(i),
-                                status.hasAlmanacData(i),
-                                status.hasEphemerisData(i),
-                                status.usedInFix(i),
-                                status.getElevationDegrees(i),
-                                status.getAzimuthDegrees(i));
-                        if (GpsTestUtil.isGnssCarrierFrequenciesSupported()) {
-                            if (status.hasCarrierFrequencyHz(i)) {
-                                thisSat.setHasCarrierFrequency(true);
-                                thisSat.setCarrierFrequencyHz(status.getCarrierFrequencyHz(i));
-                            }
-                        }
-
-                        String hashKey = thisSat.getGnssType().name() + status.getSvid(i);
-                        satStatus.put(hashKey, thisSat);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-        }
+    protected GeoPackageRecorder(Context context) {
+        super("GeoPkgRcdr");
+        this.context = context;
     }
 
     public void onGnssMeasurementsReceived(final GnssMeasurementsEvent event) {
@@ -361,7 +249,7 @@ public class GeoPackageRecorder extends HandlerThread {
 
                     final long time = System.currentTimeMillis();
                     for (final GnssMeasurement g : gm) {
-                        String con = SatType.get(g.getConstellationType());
+                        String con = satType.get(g.getConstellationType());
                         String hashKey = con + g.getSvid();
 
                         SimpleAttributesDao satDao = RTE.getSimpleAttributesDao(satTblName);
@@ -437,6 +325,193 @@ public class GeoPackageRecorder extends HandlerThread {
 
                         satInfo.put(hashKey, g);
                         satRowsToMap.put(hashKey, satRow.getId());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
+    public void onLocationChanged(final Location loc) {
+        if (ready.get() && (handler != null)) {
+            handler.post(() -> {
+                try {
+                    HashMap<String, Long> mapRows = (HashMap) satRowsToMap.clone();
+                    satRowsToMap.clear();
+
+                    /*HashMap<String, String> locData = new HashMap<String, String>() {
+                        {
+                            put("Lat", String.valueOf(loc.getLatitude()));
+                            put("Lon", String.valueOf(loc.getLongitude()));
+                            put("Alt", String.valueOf(loc.getAltitude()));
+                            put("Provider", String.valueOf(loc.getProvider()));
+                            put("Time", String.valueOf(loc.getTime()));
+                            put("FixSatCount", String.valueOf(loc.getExtras().getInt("satellites")));
+                            put("HasRadialAccuracy", String.valueOf(loc.hasAccuracy()));
+                            put("RadialAccuracy", String.valueOf(loc.getAccuracy()));
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                put("HasVerticalAccuracy", String.valueOf(loc.hasVerticalAccuracy()));
+                                put("VerticalAccuracy", String.valueOf(loc.getVerticalAccuracyMeters()));
+                            }
+                        }
+                    };*/
+
+                    if (gpsGpkg != null) {
+                        FeatureDao featDao = gpsGpkg.getFeatureDao(ptsTableName);
+                        FeatureRow featureRow = featDao.newRow();
+                        UserMappingDao satMapDAO = RTE.getMappingDao(satExtRel);
+
+                        Point fix = new Point(loc.getLongitude(), loc.getLatitude(), loc.getAltitude());
+
+                        GeoPackageGeometryData geomData = new GeoPackageGeometryData(WGS84_SRS);
+                        geomData.setGeometry(fix);
+
+                        featureRow.setGeometry(geomData);
+
+                        featureRow.setValue(GPS_OBS_PT_LAT, loc.getLatitude());
+                        featureRow.setValue(GPS_OBS_PT_LNG, loc.getLongitude());
+                        featureRow.setValue(GPS_OBS_PT_ALT, loc.getAltitude());
+                        featureRow.setValue("Provider", loc.getProvider());
+                        featureRow.setValue(GPS_OBS_PT_GPS_TIME, loc.getTime());
+                        featureRow.setValue("FixSatCount", loc.getExtras().getInt("satellites"));
+
+                        if (loc.hasAccuracy()) {
+                            featureRow.setValue("RadialAccuracy", (double) loc.getAccuracy());
+                            featureRow.setValue("HasRadialAccuracy", 1);
+                        } else {
+                            featureRow.setValue("RadialAccuracy", 0d);
+                            featureRow.setValue("HasRadialAccuracy", 0);
+                        }
+
+                        if (loc.hasSpeed()) {
+                            featureRow.setValue("Speed", (double) loc.getAccuracy());
+                            featureRow.setValue("HasSpeed", 1);
+                        } else {
+                            featureRow.setValue("Speed", 0d);
+                            featureRow.setValue("HasSpeed", 0);
+                        }
+
+                        if (loc.hasBearing()) {
+                            featureRow.setValue("Bearing", (double) loc.getAccuracy());
+                            featureRow.setValue("HasBearing", 1);
+                        } else {
+                            featureRow.setValue("Bearing", 0d);
+                            featureRow.setValue("HasBearing", 0);
+                        }
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            featureRow.setValue("SysTime", now().toString());
+
+                            if (loc.hasVerticalAccuracy()) {
+                                featureRow.setValue("VerticalAccuracy", (double) loc.getVerticalAccuracyMeters());
+                                featureRow.setValue("HasVerticalAccuracy", 1);
+                            } else {
+                                featureRow.setValue("VerticalAccuracy", 0d);
+                                featureRow.setValue("HasVerticalAccuracy", 0);
+                            }
+
+                            if (loc.hasSpeedAccuracy()) {
+                                featureRow.setValue("SpeedAccuracy", (double) loc.getAccuracy());
+                                featureRow.setValue("HasSpeedAccuracy", 1);
+                            } else {
+                                featureRow.setValue("SpeedAccuracy", 0d);
+                                featureRow.setValue("HasSpeedAccuracy", 0);
+                            }
+
+                            if (loc.hasBearingAccuracy()) {
+                                featureRow.setValue("BearingAccuracy", (double) loc.getAccuracy());
+                                featureRow.setValue("HasBearingAccuracy", 1);
+                            } else {
+                                featureRow.setValue("BearingAccuracy", 0d);
+                                featureRow.setValue("HasBearingAccuracy", 0);
+                            }
+                        } else {
+                            Date currentTime = Calendar.getInstance().getTime();
+                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US);
+                            featureRow.setValue("SysTime", df.format(currentTime));
+                            featureRow.setValue("HasVerticalAccuracy", 0);
+                            featureRow.setValue("VerticalAccuracy", 0d);
+                        }
+
+                        featureRow.setValue("data_dump", loc.toString() + " " + loc.describeContents());
+
+                        //EW risk values
+                        featureRow.setValue(GPS_OBS_PT_PROB_RFI, -1d);
+                        featureRow.setValue(GPS_OBS_PT_PROB_CN0AGC, -1d);
+                        featureRow.setValue(GPS_OBS_PT_PROB_CONSTELLATION, -1d);
+
+                        featDao.insert(featureRow);
+
+                        for (long id : mapRows.values()) {
+                            UserMappingRow satMapRow = satMapDAO.newRow();
+                            satMapRow.setBaseId(featureRow.getId());
+                            satMapRow.setRelatedId(id);
+                            satMapDAO.create(satMapRow);
+                        }
+
+                        // update feature table bounding box if necessary
+                        boolean dirty = false;
+                        BoundingBox bb = featDao.getBoundingBox();
+                        if (loc.getLatitude() < bb.getMinLatitude()) {
+                            bb.setMinLatitude(loc.getLatitude());
+                            dirty = true;
+                        }
+
+                        if (loc.getLatitude() > bb.getMaxLatitude()) {
+                            bb.setMaxLatitude(loc.getLatitude());
+                            dirty = true;
+                        }
+
+                        if (loc.getLongitude() < bb.getMinLongitude()) {
+                            bb.setMinLongitude(loc.getLongitude());
+                        }
+
+                        if (loc.getLongitude() > bb.getMaxLongitude()) {
+                            bb.setMaxLongitude(loc.getLongitude());
+                        }
+
+                        if (dirty) {
+                            String bbSql = "UPDATE gpkg_contents SET " +
+                                    " min_x = " + bb.getMinLongitude() +
+                                    ", max_x = " + bb.getMaxLongitude() +
+                                    ", min_y = " + bb.getMinLatitude() +
+                                    ", max_y = " + bb.getMaxLatitude() +
+                                    " WHERE table_name = '" + ptsTableName + "';";
+                            gpsGpkg.execSQL(bbSql);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+
+    public void onSatelliteStatusChanged(final GnssStatus status) {
+        if (ready.get() && (handler != null)) {
+            handler.post(() -> {
+                try {
+                    int numSats = status.getSatelliteCount();
+
+                    for (int i = 0; i < numSats; ++i) {
+
+                        SatelliteStatus thisSat = new SatelliteStatus(status.getSvid(i), GpsTestUtil.getGnssConstellationType(status.getConstellationType(i)),
+                                status.getCn0DbHz(i),
+                                status.hasAlmanacData(i),
+                                status.hasEphemerisData(i),
+                                status.usedInFix(i),
+                                status.getElevationDegrees(i),
+                                status.getAzimuthDegrees(i));
+                        if (GpsTestUtil.isGnssCarrierFrequenciesSupported()) {
+                            if (status.hasCarrierFrequencyHz(i)) {
+                                thisSat.setHasCarrierFrequency(true);
+                                thisSat.setCarrierFrequencyHz(status.getCarrierFrequencyHz(i));
+                            }
+                        }
+
+                        String hashKey = thisSat.getGnssType().name() + status.getSvid(i);
+                        satStatus.put(hashKey, thisSat);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -556,170 +631,85 @@ public class GeoPackageRecorder extends HandlerThread {
         }
     }
 
-    public void onLocationChanged(final Location loc) {
-        if (ready.get() && (handler != null)) {
-            handler.post(() -> {
-                try {
-                    HashMap<String, Long> mapRows = (HashMap) satRowsToMap.clone();
-                    satRowsToMap.clear();
+    /**
+     * Shuts down the recorder and provides the file path for the database
+     *
+     * @return The gpkg filename.
+     */
+    public String shutdown() {
+        Toast.makeText(context, context.getString(R.string.data_saved_location) + Config.getInstance(context).getSavedDir(), Toast.LENGTH_LONG).show();
+        Log.d(TAG, "GeoPackageRecorder.shutdown()");
+        ready.set(false);
+        getLooper().quit();
+        if (gpsGpkg != null) {
+            gpsGpkg.close();
+            gpsGpkg = null;
+        }
+        removeTempFiles();
+        return gpkgFilename;
+    }
 
-                    /*HashMap<String, String> locData = new HashMap<String, String>() {
-                        {
-                            put("Lat", String.valueOf(loc.getLatitude()));
-                            put("Lon", String.valueOf(loc.getLongitude()));
-                            put("Alt", String.valueOf(loc.getAltitude()));
-                            put("Provider", String.valueOf(loc.getProvider()));
-                            put("Time", String.valueOf(loc.getTime()));
-                            put("FixSatCount", String.valueOf(loc.getExtras().getInt("satellites")));
-                            put("HasRadialAccuracy", String.valueOf(loc.hasAccuracy()));
-                            put("RadialAccuracy", String.valueOf(loc.getAccuracy()));
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                put("HasVerticalAccuracy", String.valueOf(loc.hasVerticalAccuracy()));
-                                put("VerticalAccuracy", String.valueOf(loc.getVerticalAccuracyMeters()));
+    private void removeTempFiles() {
+        try {
+            String dirPath = Config.getInstance(context).getSavedDir();
+            if (dirPath != null) {
+                File dir = new File(dirPath);
+                if (dir.exists()) {
+                    File[] files = dir.listFiles();
+                    if ((files != null) && (files.length > 0)) {
+                        for (File file : files) {
+                            String fileName = file.getName();
+                            if ((fileName != null) && fileName.endsWith("-journal")) {
+                                //noinspection ResultOfMethodCallIgnored
+                                file.delete();
                             }
-                        }
-                    };*/
-
-                    if (gpsGpkg != null) {
-                        FeatureDao featDao = gpsGpkg.getFeatureDao(PtsTableName);
-                        FeatureRow featureRow = featDao.newRow();
-                        UserMappingDao satMapDAO = RTE.getMappingDao(satExtRel);
-
-                        Point fix = new Point(loc.getLongitude(), loc.getLatitude(), loc.getAltitude());
-
-                        GeoPackageGeometryData geomData = new GeoPackageGeometryData(WGS84_SRS);
-                        geomData.setGeometry(fix);
-
-                        featureRow.setGeometry(geomData);
-
-                        featureRow.setValue(GPS_OBS_PT_LAT, loc.getLatitude());
-                        featureRow.setValue(GPS_OBS_PT_LNG, loc.getLongitude());
-                        featureRow.setValue(GPS_OBS_PT_ALT, loc.getAltitude());
-                        featureRow.setValue("Provider", loc.getProvider());
-                        featureRow.setValue(GPS_OBS_PT_GPS_TIME, loc.getTime());
-                        featureRow.setValue("FixSatCount", loc.getExtras().getInt("satellites"));
-
-                        if (loc.hasAccuracy()) {
-                            featureRow.setValue("RadialAccuracy", (double) loc.getAccuracy());
-                            featureRow.setValue("HasRadialAccuracy", 1);
-                        } else {
-                            featureRow.setValue("RadialAccuracy", 0d);
-                            featureRow.setValue("HasRadialAccuracy", 0);
-                        }
-
-                        if (loc.hasSpeed()) {
-                            featureRow.setValue("Speed", (double) loc.getAccuracy());
-                            featureRow.setValue("HasSpeed", 1);
-                        } else {
-                            featureRow.setValue("Speed", 0d);
-                            featureRow.setValue("HasSpeed", 0);
-                        }
-
-                        if (loc.hasBearing()) {
-                            featureRow.setValue("Bearing", (double) loc.getAccuracy());
-                            featureRow.setValue("HasBearing", 1);
-                        } else {
-                            featureRow.setValue("Bearing", 0d);
-                            featureRow.setValue("HasBearing", 0);
-                        }
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            featureRow.setValue("SysTime", now().toString());
-
-                            if (loc.hasVerticalAccuracy()) {
-                                featureRow.setValue("VerticalAccuracy", (double) loc.getVerticalAccuracyMeters());
-                                featureRow.setValue("HasVerticalAccuracy", 1);
-                            } else {
-                                featureRow.setValue("VerticalAccuracy", 0d);
-                                featureRow.setValue("HasVerticalAccuracy", 0);
-                            }
-
-                            if (loc.hasSpeedAccuracy()) {
-                                featureRow.setValue("SpeedAccuracy", (double) loc.getAccuracy());
-                                featureRow.setValue("HasSpeedAccuracy", 1);
-                            } else {
-                                featureRow.setValue("SpeedAccuracy", 0d);
-                                featureRow.setValue("HasSpeedAccuracy", 0);
-                            }
-
-                            if (loc.hasBearingAccuracy()) {
-                                featureRow.setValue("BearingAccuracy", (double) loc.getAccuracy());
-                                featureRow.setValue("HasBearingAccuracy", 1);
-                            } else {
-                                featureRow.setValue("BearingAccuracy", 0d);
-                                featureRow.setValue("HasBearingAccuracy", 0);
-                            }
-                        } else {
-                            Date currentTime = Calendar.getInstance().getTime();
-                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US);
-                            featureRow.setValue("SysTime", df.format(currentTime));
-                            featureRow.setValue("HasVerticalAccuracy", 0);
-                            featureRow.setValue("VerticalAccuracy", 0d);
-                        }
-
-                        featureRow.setValue("data_dump", loc.toString() + " " + loc.describeContents());
-
-                        //EW risk values
-                        featureRow.setValue(GPS_OBS_PT_PROB_RFI, -1d);
-                        featureRow.setValue(GPS_OBS_PT_PROB_CN0AGC, -1d);
-                        featureRow.setValue(GPS_OBS_PT_PROB_CONSTELLATION, -1d);
-
-                        featDao.insert(featureRow);
-
-                        for (long id : mapRows.values()) {
-                            UserMappingRow satMapRow = satMapDAO.newRow();
-                            satMapRow.setBaseId(featureRow.getId());
-                            satMapRow.setRelatedId(id);
-                            satMapDAO.create(satMapRow);
-                        }
-
-                        // update feature table bounding box if necessary
-                        boolean dirty = false;
-                        BoundingBox bb = featDao.getBoundingBox();
-                        if (loc.getLatitude() < bb.getMinLatitude()) {
-                            bb.setMinLatitude(loc.getLatitude());
-                            dirty = true;
-                        }
-
-                        if (loc.getLatitude() > bb.getMaxLatitude()) {
-                            bb.setMaxLatitude(loc.getLatitude());
-                            dirty = true;
-                        }
-
-                        if (loc.getLongitude() < bb.getMinLongitude()) {
-                            bb.setMinLongitude(loc.getLongitude());
-                        }
-
-                        if (loc.getLongitude() > bb.getMaxLongitude()) {
-                            bb.setMaxLongitude(loc.getLongitude());
-                        }
-
-                        if (dirty) {
-                            String bbSql = "UPDATE gpkg_contents SET " +
-                                    " min_x = " + bb.getMinLongitude() +
-                                    ", max_x = " + bb.getMaxLongitude() +
-                                    ", min_y = " + bb.getMinLatitude() +
-                                    ", max_y = " + bb.getMaxLatitude() +
-                                    " WHERE table_name = '" + PtsTableName + "';";
-                            gpsGpkg.execSQL(bbSql);
                         }
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
-            });
+            }
+        } catch (Exception ignore) {
         }
     }
 
-    private GeoPackage openDatabase(String database) {
-        if (gpkg == null) {
-            GeoPackageManager gpkgMgr = GeoPackageFactory.getManager(context);
-            gpkg = gpkgMgr.open(database, true);
-            if (gpkg == null) {
-                throw new GeoPackageException("Failed to open GeoPackage database " + database);
+    public void startup() {
+        onLooperPrepared();
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Override
+    protected void onLooperPrepared() {
+        handler = new Handler();
+        if (gpsGpkg == null) {
+            String fileFolder = Config.getInstance(context).getSavedDir();
+            if (fileFolder != null) {
+                File file = new File(fileFolder);
+                if (!"GPSMonkey".equalsIgnoreCase(file.getName())) {
+                    File GPSMonkey = new File(file, "GPSMonkey");
+                    GPSMonkey.mkdirs();
+                    GPSMonkey.setReadable(true);
+                    gpkgFolder = GPSMonkey.getPath();
+                } else {
+                    if (file.exists()) {
+                        gpkgFolder = fileFolder;
+                    }
+                }
+            }
+
+            if (gpkgFolder == null) {
+                Log.e(TAG, "Unable to find GPSMonkey storage location");
+                gpkgFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+            }
+
+            try {
+                gpsGpkg = setupGpkgDB(context, gpkgFolder, gpkgFilename);
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
-        return gpkg;
+
+        List<String> tbls = gpsGpkg.getTables();
+        tbls.add(gpsGpkg.getApplicationId());
+        ready.set(true);
     }
 
     private GeoPackage setupGpkgDB(Context context, String folder, String file) throws GeoPackageException, SQLException {
@@ -744,18 +734,29 @@ public class GeoPackageRecorder extends HandlerThread {
 
         gpkg.createGeometryColumnsTable();
 
-        ptsTable = createObservationTable(gpkg, srs, PtsTableName, GeometryType.POINT);
-        String bbSql = "UPDATE gpkg_contents SET min_x = 180.0, max_x = -180.0, min_y = 90.0, max_y = -90.0 WHERE table_name = '" + PtsTableName + "';";
+        ptsTable = createObservationTable(gpkg, srs, ptsTableName, GeometryType.POINT);
+        String bbSql = "UPDATE gpkg_contents SET min_x = 180.0, max_x = -180.0, min_y = 90.0, max_y = -90.0 WHERE table_name = '" + ptsTableName + "';";
         gpkg.execSQL(bbSql);
 
         Contents contents = new Contents();
         RTE = new RelatedTablesExtension(gpkg);
 
-        satTable = createSatelliteTable(contents, RTE, srs, satTblName, satMapTblName, PtsTableName);
+        satTable = createSatelliteTable(contents, RTE, srs, satTblName, satMapTblName, ptsTableName);
         clkTable = createClockTable(contents, RTE, srs, clkTblName, clkMapTblName, satTblName);
 
-//        MotionTable = createMotionTable(contents, RTE, srs, motionTblName, motionMapTblName, PtsTableName);
+//        MotionTable = createMotionTable(contents, RTE, srs, motionTblName, motionMapTblName, ptsTableName);
 
+        return gpkg;
+    }
+
+    private GeoPackage openDatabase(String database) {
+        if (gpkg == null) {
+            GeoPackageManager gpkgMgr = GeoPackageFactory.getManager(context);
+            gpkg = gpkgMgr.open(database, true);
+            if (gpkg == null) {
+                throw new GeoPackageException("Failed to open GeoPackage database " + database);
+            }
+        }
         return gpkg;
     }
 
