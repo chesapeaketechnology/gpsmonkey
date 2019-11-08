@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.android.gpstest.Application;
 import com.android.gpstest.GpsTestListener;
 import com.android.gpstest.R;
 import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
@@ -37,6 +38,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private static final int PERM_REQUEST_CODE = 1;
+    private final Intent serviceIntent = new Intent(this, GpsMonkeyService.class);
     protected boolean serviceBound = false;
     protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
@@ -54,6 +56,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
             serviceBound = false;
+            gpsMonkeyService = null;
         }
     };
 
@@ -66,6 +69,9 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
 //        openBatteryOptimizationDialogIfNeeded();
     }
 
+    /**
+     * Starts the GPS Monkey service which handles logging the GNSS data to a GeoPackage file.
+     */
     private void startService() {
         // TODO KMB: I don't think this case can happen. Even when Android was forced to kill the
         //  process (following instructions here: https://stackoverflow.com/a/18695974), when
@@ -73,9 +79,8 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         if (serviceBound) {
             gpsMonkeyService.start();
         } else {
-            startService(new Intent(this, GpsMonkeyService.class));
-            Intent intent = new Intent(this, GpsMonkeyService.class);
-            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+            startService(serviceIntent);
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         }
     }
 
@@ -119,6 +124,24 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Called immediately before the activity is made visible. This method should initialize
+     * components that are released in {@link #onStop()}.
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onStart() {
+        // TODO KMB: If we are unbinding in stop, shouldn't we bind in start?
+        super.onStart();
+    }
+
+    /**
+     * Called when the activity is brought to the foreground and gains focus. This method should
+     * initialize components that are released in {@link #onPause()}.
+     *
+     * {@inheritDoc}
+     */
     @Override
     protected void onResume() {
         super.onResume();
@@ -129,6 +152,12 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Called when the activity is losing focus (but may still be visible). This method should
+     * release components that were initialized in {@link #onResume()}.
+     *
+     * {@inheritDoc}
+     */
     @Override
     protected void onPause() {
         if (gpsMonkeyService != null) {
@@ -137,6 +166,12 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         super.onPause();
     }
 
+    /**
+     * Called when the activity is no longer visible. This method should release components that
+     * were initialized in {@link #onStart()}.
+     *
+     * {@inheritDoc}
+     */
     @Override
     protected void onStop() {
         super.onStop();
@@ -149,11 +184,37 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * According to the Android documentation, there are situations where the system will kill the
+     * host process without calling {@link #onDestroy()}, so that should not be used as a place to
+     * save data. It recommends using either {@link #onSaveInstanceState(Bundle)} or
+     * {@link #onPause()}. Unfortunately, both can happen in multiple cases where we would want to
+     * keep running the service and recording data (such as switching to the settings activity
+     * within the GPS Monkey app). The main advantage of using this method is that it will not be
+     * called in multi-window mode when the focus is switched, whereas {@link #onPause()} will be
+     * called whenever this activity loses focus.
+     *
+     * Note: This method will be called before {@link #onStop()} prior to
+     * {@link android.os.Build.VERSION_CODES.P} and after in later versions.
+     *
+     * @see <a href="https://developer.android.com/reference/android/app/Activity.html#onDestroy%28%29">
+     * Activity#onDestroy() reference documentation</a>
+     */
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
 
-        // TODO: Save DB here
+        // TODO KMB: This is too aggressive; it stops the service if we change to another activity
+        //  in the app (such as the preferences activity). However, it looks like GpsTestActivity
+        //  has the same issue.
+
+        // Check if the user has chosen to stop GNSS whenever app is in background
+        if (!isChangingConfigurations() && Application.getPrefs().getBoolean(getString(R.string.pref_key_stop_gnss_in_background), false)) {
+
+            if (serviceBound) {
+                stopService(serviceIntent);
+            }
+        }
     }
 
     /**
@@ -171,8 +232,8 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
                 .setTitle(R.string.quit_GPSMonkey)
                 .setMessage(R.string.quit_GPSMonkey_narrative)
                 .setNegativeButton(R.string.quit_yes, (dialog, which) -> {
-                    if (serviceBound && (gpsMonkeyService != null)) {
-                        gpsMonkeyService.shutdown();
+                    if (serviceBound) {
+                        stopService(serviceIntent);
                     }
                     finish();
                 })

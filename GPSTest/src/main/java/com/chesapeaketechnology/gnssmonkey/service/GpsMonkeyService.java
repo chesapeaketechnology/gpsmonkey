@@ -43,7 +43,6 @@ public class GpsMonkeyService extends Service {
 
     public static final String ACTION_STOP = "STOP";
     public static final String PREFS_CURRENT_INPUT_MODE = "inputmode";
-
     private static final String TAG = "GPSMonkey.Service";
     private static final int GPS_MONKEY_NOTIFICATION_ID = 1;
     private static final String NOTIFICATION_CHANNEL = "GPSMonkey_report";
@@ -164,6 +163,8 @@ public class GpsMonkeyService extends Service {
         synchronized (this) {
             if (intent != null) {
                 String action = intent.getAction();
+
+                // This stop action comes from the GPS Monkey notification
                 if (ACTION_STOP.equalsIgnoreCase(action)) {
                     Log.d(TAG, "Shutting down GpsMonkeyService");
                     stopSelf();
@@ -217,6 +218,7 @@ public class GpsMonkeyService extends Service {
             if (inputSourceType == LOCAL_FILE) {
                 if (geoPackageRecorder != null) {
                     geoPackageRecorder.shutdown();
+                    geoPackageRecorder = null;
                 }
             } else {
                 if (geoPackageRecorder == null) {
@@ -242,7 +244,7 @@ public class GpsMonkeyService extends Service {
         }
 
         Notification.Builder builder;
-        builder = new Notification.Builder(this);
+        builder = new Notification.Builder(this, NOTIFICATION_CHANNEL);
         builder.setContentIntent(pendingIntent);
         //TODO
         builder.setSmallIcon(R.mipmap.ic_launcher);
@@ -258,10 +260,7 @@ public class GpsMonkeyService extends Service {
                 builder.setContentText(getResources().getString(R.string.notification));
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder.setChannelId(NOTIFICATION_CHANNEL);
-        }
-
+        // Add an action to the notification for stopping the GPS Monkey service
         Intent intentStop = new Intent(this, GpsMonkeyService.class);
         intentStop.setAction(ACTION_STOP);
         PendingIntent pIntentShutdown = PendingIntent.getService(this, 0, intentStop, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -326,13 +325,6 @@ public class GpsMonkeyService extends Service {
         start(inputSourceType);
     }
 
-    /**
-     * Clean-up GPSMonkey and then stop this service
-     */
-    public void shutdown() {
-        stopSelf();
-    }
-
     public void updateLocation(final Location location) {
         currentLocation = location;
         if (geoPackageRecorder != null) {
@@ -342,10 +334,6 @@ public class GpsMonkeyService extends Service {
         if (listener != null) {
             listener.onLocationChanged(location);
         }
-    }
-
-    public Location getCurrentLocation() {
-        return currentLocation;
     }
 
     public GeoPackageRecorder getGeoPackageRecorder() {
