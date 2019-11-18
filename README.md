@@ -1,4 +1,4 @@
-# GPSTest [![Build Status](https://travis-ci.org/barbeau/gpstest.svg?branch=master)](https://travis-ci.org/barbeau/gpstest) [![Twitter Follow](https://img.shields.io/twitter/follow/sjbarbeau.svg?style=social&label=Follow)](https://twitter.com/sjbarbeau)
+# GPSTest [![Build Status](https://travis-ci.com/chesapeaketechnology/gpsmonkey.svg?branch=develop)](https://travis-ci.com/chesapeaketechnology/gpsmonkey)
 
 The #1 open-source global navigation satellite system (GNSS) testing app
 
