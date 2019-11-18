@@ -1,5 +1,10 @@
 package com.chesapeaketechnology.gnssmonkey;
 
+import com.android.gpstest.Application;
+import com.android.gpstest.GpsTestListener;
+import com.android.gpstest.R;
+import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -18,16 +23,11 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import com.android.gpstest.Application;
-import com.android.gpstest.GpsTestListener;
-import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
-
-import java.util.ArrayList;
 
 /**
  * Abstract activity to manage the GPS Monkey service (and isolate code changes for GPS Monkey from
@@ -38,7 +38,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private static final int PERM_REQUEST_CODE = 1;
-    private final Intent serviceIntent = new Intent(this, GpsMonkeyService.class);
+    private Intent serviceIntent;
     protected boolean serviceBound = false;
     protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
@@ -73,6 +73,8 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
      * Starts the GPS Monkey service which handles logging the GNSS data to a GeoPackage file.
      */
     private void startService() {
+        serviceIntent = new Intent(this, GpsMonkeyService.class);
+
         // TODO KMB: I don't think this case can happen. Even when Android was forced to kill the
         //  process (following instructions here: https://stackoverflow.com/a/18695974), when
         //  onCreate() was called, serviceBound was false and gpsMonkeyService was null.

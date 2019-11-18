@@ -1,5 +1,10 @@
 package com.chesapeaketechnology.gnssmonkey.service;
 
+import com.android.gpstest.Application;
+import com.android.gpstest.GpsTestListener;
+import com.android.gpstest.R;
+import com.chesapeaketechnology.gnssmonkey.FailureActivity;
+
 import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,15 +27,10 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.io.File;
+
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-
-import com.android.gpstest.Application;
-import com.android.gpstest.GpsTestListener;
-import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.FailureActivity;
-
-import java.io.File;
 
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL_FILE;
@@ -43,6 +43,7 @@ public class GpsMonkeyService extends Service {
 
     public static final String ACTION_STOP = "STOP";
     public static final String PREFS_CURRENT_INPUT_MODE = "inputmode";
+
     private static final String TAG = "GPSMonkey.Service";
     private static final int GPS_MONKEY_NOTIFICATION_ID = 1;
     private static final String NOTIFICATION_CHANNEL = "GPSMonkey_report";
