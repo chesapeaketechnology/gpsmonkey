@@ -73,8 +73,8 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
      * Starts the GPS Monkey service which handles logging the GNSS data to a GeoPackage file.
      */
     private void startService() {
-        serviceIntent = new Intent(this, GpsMonkeyService.class);
-
+        if (serviceIntent == null) serviceIntent = new Intent(this, GpsMonkeyService.class);
+        
         // TODO KMB: I don't think this case can happen. Even when Android was forced to kill the
         //  process (following instructions here: https://stackoverflow.com/a/18695974), when
         //  onCreate() was called, serviceBound was false and gpsMonkeyService was null.
