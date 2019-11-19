@@ -82,7 +82,6 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
             gpsMonkeyService.start();
         } else {
             startService(serviceIntent);
-            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         }
     }
 
@@ -134,8 +133,11 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
      */
     @Override
     protected void onStart() {
-        // TODO KMB: If we are unbinding in stop, shouldn't we bind in start?
         super.onStart();
+
+        if (!serviceBound) {
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        }
     }
 
     /**
@@ -177,11 +179,11 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (serviceBound && (gpsMonkeyService != null)) {
+        if (serviceBound) {
             try {
                 unbindService(serviceConnection);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error unbinding service", e);
             }
         }
     }
