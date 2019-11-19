@@ -192,55 +192,29 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
      * save data. It recommends using either {@link #onSaveInstanceState(Bundle)} or
      * {@link #onPause()}. Unfortunately, both can happen in multiple cases where we would want to
      * keep running the service and recording data (such as switching to the settings activity
-     * within the GPS Monkey app). The main advantage of using this method is that it will not be
-     * called in multi-window mode when the focus is switched, whereas {@link #onPause()} will be
-     * called whenever this activity loses focus.
+     * within the GPS Monkey app).
      *
-     * Note: This method will be called before {@link #onStop()} prior to
-     * {@link android.os.Build.VERSION_CODES.P} and after in later versions.
+     * The documentation does not describe the situations where this method would not be called, but
+     * it is likely something like the battery dying, in which case there isn't much we could do
+     * anyway.
      *
      * @see <a href="https://developer.android.com/reference/android/app/Activity.html#onDestroy%28%29">
      * Activity#onDestroy() reference documentation</a>
      */
     @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
-        super.onSaveInstanceState(savedInstanceState);
-
-        // TODO KMB: This is too aggressive; it stops the service if we change to another activity
-        //  in the app (such as the preferences activity). However, it looks like GpsTestActivity
-        //  has the same issue.
-
-        // Check if the user has chosen to stop GNSS whenever app is in background
-        if (!isChangingConfigurations() && Application.getPrefs().getBoolean(getString(R.string.pref_key_stop_gnss_in_background), false)) {
+    protected void onDestroy() {
+        // If the user has chosen to stop GNSS whenever the app is in the background, stop the GPS
+        // Monkey service when the app is destroyed. Ultimately, we may want to create a separate
+        // setting for this, since the user may want to allow GNSS to run in the background while
+        // the app is running, but not have a service running once they kill the app.
+        if (isFinishing() && Application.getPrefs().getBoolean(getString(R.string.pref_key_stop_gnss_in_background), false)) {
 
             if (serviceBound) {
                 stopService(serviceIntent);
             }
         }
-    }
 
-    /**
-     * Per the Android documentation, there are situations where the system will kill the host
-     * process without calling this method, so it should not be used as a place to save data.
-     */
-    @Override
-    protected void onDestroy() {
         super.onDestroy();
-    }
-
-    @Override
-    public void onBackPressed() {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.quit_GPSMonkey)
-                .setMessage(R.string.quit_GPSMonkey_narrative)
-                .setNegativeButton(R.string.quit_yes, (dialog, which) -> {
-                    if (serviceBound) {
-                        stopService(serviceIntent);
-                    }
-                    finish();
-                })
-                .setPositiveButton(R.string.quit_run_in_background, (arg0, arg1) -> finish())
-                .create().show();
     }
 
     protected void onGPSMonkeyServiceConnected() {

@@ -287,21 +287,22 @@ public class GpsMonkeyService extends Service {
             locationManager = null;
         }
 
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.cancelAll();
+
         shareFile();
 
         super.onDestroy();
     }
 
     public void shareFile() {
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
-        notificationManager.cancelAll();
-
         String dbFile = null;
         if (geoPackageRecorder != null) {
             dbFile = geoPackageRecorder.shutdown();
         }
 
-        if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), true)) {
+        // Default auto-sharing to false until we add a user setting for it.
+        if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), false)) {
             File file = new File(dbFile);
             if (file.exists()) {
                 Intent intentShareFile = new Intent(Intent.ACTION_SEND);
