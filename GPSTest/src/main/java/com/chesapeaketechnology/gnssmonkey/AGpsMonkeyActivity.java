@@ -38,7 +38,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private static final int PERM_REQUEST_CODE = 1;
-    private final Intent serviceIntent = new Intent(this, GpsMonkeyService.class);
+    private Intent serviceIntent;
     protected boolean serviceBound = false;
     protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
