@@ -1,5 +1,9 @@
 package com.chesapeaketechnology.gnssmonkey.service;
 
+import com.android.gpstest.Application;
+import com.android.gpstest.R;
+import com.chesapeaketechnology.gnssmonkey.FailureActivity;
+
 import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,15 +26,10 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.io.File;
+
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-
-import com.android.gpstest.Application;
-import com.android.gpstest.GpsTestListener;
-import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.FailureActivity;
-
-import java.io.File;
 
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL_FILE;
@@ -79,10 +78,6 @@ public class GpsMonkeyService extends Service {
                 if (geoPackageRecorder != null) {
                     geoPackageRecorder.onSatelliteStatusChanged(status);
                 }
-
-                if (listener != null) {
-                    listener.onSatelliteStatusChanged(status);
-                }
             }
         }
     };
@@ -111,13 +106,9 @@ public class GpsMonkeyService extends Service {
         }
 
         public void onProviderEnabled(String provider) {
-//            if ((listener != null) && (inputSourceType == LOCAL))
-//                listener.onProviderChanged(provider, true);
         }
 
         public void onProviderDisabled(String provider) {
-//            if ((listener != null) && (inputSourceType == LOCAL))
-//                listener.onProviderChanged(provider, false);
         }
     };
 
@@ -128,7 +119,6 @@ public class GpsMonkeyService extends Service {
     private long firstGpsAcqTime = Long.MIN_VALUE;
     private boolean gnssRawSupportKnown = false;
     private LocationManager locationManager = null;
-    private GpsTestListener listener = null;
 
     /**
      * Performs one-time setup immediately before either {@link #onStartCommand(Intent, int, int)}
@@ -202,17 +192,12 @@ public class GpsMonkeyService extends Service {
                 }
 
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
-                if (inputSourceType == LOCAL) {
-                    currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                }
-            } else {
-                if (inputSourceType == LOCAL) {
-                    currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (listener != null) {
-                        listener.onLocationChanged(currentLocation);
-                    }
-                }
             }
+
+            if (inputSourceType == LOCAL) {
+                currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            }
+
 
             if (inputSourceType == LOCAL_FILE) {
                 if (geoPackageRecorder != null) {
@@ -318,29 +303,35 @@ public class GpsMonkeyService extends Service {
         }
     }
 
-    public void setListener(GpsTestListener listener) {
-        this.listener = listener;
-    }
-
     public void start() {
         start(inputSourceType);
     }
 
     /**
-     * Clean-up GPSMonkey and then stop this service
+     * Clean-up GPSMonkey and then stop this service.
      */
     public void shutdown() {
         stopSelf();
+    }
+
+    /**
+     * Opens a files for recording GPS data and registers for GPS updates.
+     */
+    public void startGps() {
+        // TODO: Open file and start GPS updates
+    }
+
+    /**
+     * Unregisters from GPS updates and closes the file recording the GPS data.
+     */
+    public void stopGps() {
+        // TODO: Stop GPS updates and close file
     }
 
     public void updateLocation(final Location location) {
         currentLocation = location;
         if (geoPackageRecorder != null) {
             geoPackageRecorder.onLocationChanged(location);
-        }
-
-        if (listener != null) {
-            listener.onLocationChanged(location);
         }
     }
 

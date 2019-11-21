@@ -1,5 +1,10 @@
 package com.chesapeaketechnology.gnssmonkey;
 
+import com.android.gpstest.GpsTestActivity;
+import com.android.gpstest.GpsTestListener;
+import com.android.gpstest.R;
+import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -18,21 +23,16 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import java.util.ArrayList;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.android.gpstest.GpsTestListener;
-import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
-
-import java.util.ArrayList;
-
 /**
- * Abstract activity to manage the GPS Monkey service (and isolate code changes for GPS Monkey from
- * existing GPS Test code to simplify merging in changes from forked app).
+ * Extension of {@link GpsTestActivity} to manage the GPS Monkey service (and isolate code changes
+ * for GPS Monkey from existing GPS Test code to simplify merging in changes from forked app).
  */
-public abstract class AGpsMonkeyActivity extends AppCompatActivity {
+public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListener {
     protected static final int REQUEST_DISABLE_BATTERY_OPTIMIZATION = 401;
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
@@ -58,12 +58,38 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Add this class as a listener to the GpsTestActivity in order to be notified of changes to
+        // the GPS on/off switch.
+        addListener(this);
+
 //        permissionsPassed = checkPermissions();
 //        if (permissionsPassed)
         startService();
 //        openBatteryOptimizationDialogIfNeeded();
+    }
+
+    /**
+     * Called when the GPS state is set to on (either initially or due to the GPS on/off switch
+     * being toggled).
+     */
+    @Override
+    public void gpsStart() {
+        if (serviceBound && (gpsMonkeyService != null)) {
+            gpsMonkeyService.startGps();
+        }
+    }
+
+    /**
+     * Called when the GPS state is set to off due to the GPS on/off switch being toggled.
+     */
+    @Override
+    public void gpsStop() {
+        if (serviceBound && (gpsMonkeyService != null)) {
+            gpsMonkeyService.stopGps();
+        }
     }
 
     private void startService() {
@@ -120,24 +146,6 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (this instanceof GpsTestListener) {
-            if (serviceBound && (gpsMonkeyService != null)) {
-                gpsMonkeyService.setListener((GpsTestListener) this);
-            }
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        if (gpsMonkeyService != null) {
-            gpsMonkeyService.setListener(null);
-        }
-        super.onPause();
-    }
-
-    @Override
     protected void onStop() {
         super.onStop();
         if (serviceBound && (gpsMonkeyService != null)) {
@@ -181,9 +189,6 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     }
 
     protected void onGPSMonkeyServiceConnected() {
-        if (this instanceof GpsTestListener) {
-            gpsMonkeyService.setListener((GpsTestListener) this);
-        }
     }
 
     /**
