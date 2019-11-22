@@ -1,5 +1,10 @@
 package com.chesapeaketechnology.gnssmonkey;
 
+import com.android.gpstest.Application;
+import com.android.gpstest.GpsTestListener;
+import com.android.gpstest.R;
+import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -18,15 +23,11 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import com.android.gpstest.GpsTestListener;
-import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
-
-import java.util.ArrayList;
 
 /**
  * Abstract activity to manage the GPS Monkey service (and isolate code changes for GPS Monkey from
@@ -37,6 +38,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private static final int PERM_REQUEST_CODE = 1;
+    private Intent serviceIntent;
     protected boolean serviceBound = false;
     protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
@@ -54,6 +56,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
             serviceBound = false;
+            gpsMonkeyService = null;
         }
     };
 
@@ -66,16 +69,19 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
 //        openBatteryOptimizationDialogIfNeeded();
     }
 
+    /**
+     * Starts the GPS Monkey service which handles logging the GNSS data to a GeoPackage file.
+     */
     private void startService() {
+        if (serviceIntent == null) serviceIntent = new Intent(this, GpsMonkeyService.class);
+        
         // TODO KMB: I don't think this case can happen. Even when Android was forced to kill the
         //  process (following instructions here: https://stackoverflow.com/a/18695974), when
         //  onCreate() was called, serviceBound was false and gpsMonkeyService was null.
         if (serviceBound) {
             gpsMonkeyService.start();
         } else {
-            startService(new Intent(this, GpsMonkeyService.class));
-            Intent intent = new Intent(this, GpsMonkeyService.class);
-            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+            startService(serviceIntent);
         }
     }
 
@@ -119,6 +125,27 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Called immediately before the activity is made visible. This method should initialize
+     * components that are released in {@link #onStop()}.
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (!serviceBound) {
+            bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        }
+    }
+
+    /**
+     * Called when the activity is brought to the foreground and gains focus. This method should
+     * initialize components that are released in {@link #onPause()}.
+     *
+     * {@inheritDoc}
+     */
     @Override
     protected void onResume() {
         super.onResume();
@@ -129,6 +156,12 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Called when the activity is losing focus (but may still be visible). This method should
+     * release components that were initialized in {@link #onResume()}.
+     *
+     * {@inheritDoc}
+     */
     @Override
     protected void onPause() {
         if (gpsMonkeyService != null) {
@@ -137,47 +170,53 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         super.onPause();
     }
 
+    /**
+     * Called when the activity is no longer visible. This method should release components that
+     * were initialized in {@link #onStart()}.
+     *
+     * {@inheritDoc}
+     */
     @Override
     protected void onStop() {
         super.onStop();
-        if (serviceBound && (gpsMonkeyService != null)) {
+        if (serviceBound) {
             try {
                 unbindService(serviceConnection);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error unbinding service", e);
             }
         }
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
-        super.onSaveInstanceState(savedInstanceState);
-
-        // TODO: Save DB here
-    }
-
     /**
-     * Per the Android documentation, there are situations where the system will kill the host
-     * process without calling this method, so it should not be used as a place to save data.
+     * According to the Android documentation, there are situations where the system will kill the
+     * host process without calling {@link #onDestroy()}, so that should not be used as a place to
+     * save data. It recommends using either {@link #onSaveInstanceState(Bundle)} or
+     * {@link #onPause()}. Unfortunately, both can happen in multiple cases where we would want to
+     * keep running the service and recording data (such as switching to the settings activity
+     * within the GPS Monkey app).
+     *
+     * The documentation does not describe the situations where this method would not be called, but
+     * it is likely something like the battery dying, in which case there isn't much we could do
+     * anyway.
+     *
+     * @see <a href="https://developer.android.com/reference/android/app/Activity.html#onDestroy%28%29">
+     * Activity#onDestroy() reference documentation</a>
      */
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-    }
+        // If the user has chosen to stop GNSS whenever the app is in the background, stop the GPS
+        // Monkey service when the app is destroyed. Ultimately, we may want to create a separate
+        // setting for this, since the user may want to allow GNSS to run in the background while
+        // the app is running, but not have a service running once they kill the app.
+        if (isFinishing() && Application.getPrefs().getBoolean(getString(R.string.pref_key_stop_gnss_in_background), false)) {
 
-    @Override
-    public void onBackPressed() {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.quit_GPSMonkey)
-                .setMessage(R.string.quit_GPSMonkey_narrative)
-                .setNegativeButton(R.string.quit_yes, (dialog, which) -> {
-                    if (serviceBound && (gpsMonkeyService != null)) {
-                        gpsMonkeyService.shutdown();
-                    }
-                    finish();
-                })
-                .setPositiveButton(R.string.quit_run_in_background, (arg0, arg1) -> finish())
-                .create().show();
+            if (serviceBound) {
+                stopService(serviceIntent);
+            }
+        }
+
+        super.onDestroy();
     }
 
     protected void onGPSMonkeyServiceConnected() {

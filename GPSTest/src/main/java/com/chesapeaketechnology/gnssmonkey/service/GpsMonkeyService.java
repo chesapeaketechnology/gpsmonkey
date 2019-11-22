@@ -1,5 +1,10 @@
 package com.chesapeaketechnology.gnssmonkey.service;
 
+import com.android.gpstest.Application;
+import com.android.gpstest.GpsTestListener;
+import com.android.gpstest.R;
+import com.chesapeaketechnology.gnssmonkey.FailureActivity;
+
 import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,15 +27,10 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.io.File;
+
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-
-import com.android.gpstest.Application;
-import com.android.gpstest.GpsTestListener;
-import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.FailureActivity;
-
-import java.io.File;
 
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL_FILE;
@@ -164,6 +164,8 @@ public class GpsMonkeyService extends Service {
         synchronized (this) {
             if (intent != null) {
                 String action = intent.getAction();
+
+                // This stop action comes from the GPS Monkey notification
                 if (ACTION_STOP.equalsIgnoreCase(action)) {
                     Log.d(TAG, "Shutting down GpsMonkeyService");
                     stopSelf();
@@ -217,6 +219,7 @@ public class GpsMonkeyService extends Service {
             if (inputSourceType == LOCAL_FILE) {
                 if (geoPackageRecorder != null) {
                     geoPackageRecorder.shutdown();
+                    geoPackageRecorder = null;
                 }
             } else {
                 if (geoPackageRecorder == null) {
@@ -242,7 +245,7 @@ public class GpsMonkeyService extends Service {
         }
 
         Notification.Builder builder;
-        builder = new Notification.Builder(this);
+        builder = new Notification.Builder(this, NOTIFICATION_CHANNEL);
         builder.setContentIntent(pendingIntent);
         //TODO
         builder.setSmallIcon(R.mipmap.ic_launcher);
@@ -258,10 +261,7 @@ public class GpsMonkeyService extends Service {
                 builder.setContentText(getResources().getString(R.string.notification));
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder.setChannelId(NOTIFICATION_CHANNEL);
-        }
-
+        // Add an action to the notification for stopping the GPS Monkey service
         Intent intentStop = new Intent(this, GpsMonkeyService.class);
         intentStop.setAction(ACTION_STOP);
         PendingIntent pIntentShutdown = PendingIntent.getService(this, 0, intentStop, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -287,21 +287,22 @@ public class GpsMonkeyService extends Service {
             locationManager = null;
         }
 
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.cancelAll();
+
         shareFile();
 
         super.onDestroy();
     }
 
     public void shareFile() {
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
-        notificationManager.cancelAll();
-
         String dbFile = null;
         if (geoPackageRecorder != null) {
             dbFile = geoPackageRecorder.shutdown();
         }
 
-        if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), true)) {
+        // Default auto-sharing to false until we add a user setting for it.
+        if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), false)) {
             File file = new File(dbFile);
             if (file.exists()) {
                 Intent intentShareFile = new Intent(Intent.ACTION_SEND);
@@ -326,13 +327,6 @@ public class GpsMonkeyService extends Service {
         start(inputSourceType);
     }
 
-    /**
-     * Clean-up GPSMonkey and then stop this service
-     */
-    public void shutdown() {
-        stopSelf();
-    }
-
     public void updateLocation(final Location location) {
         currentLocation = location;
         if (geoPackageRecorder != null) {
@@ -342,10 +336,6 @@ public class GpsMonkeyService extends Service {
         if (listener != null) {
             listener.onLocationChanged(location);
         }
-    }
-
-    public Location getCurrentLocation() {
-        return currentLocation;
     }
 
     public GeoPackageRecorder getGeoPackageRecorder() {
