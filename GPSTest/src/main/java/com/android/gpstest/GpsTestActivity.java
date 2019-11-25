@@ -1412,18 +1412,12 @@ public abstract class GpsTestActivity extends AppCompatActivity
             case R.id.gps_switch:
                 return true;
             case R.id.share:
-                //share();
-                sendLocation();
+                share();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
-
-//    @Override
-//    protected int getLayout() {
-//        return R.layout.activity_main;
-//    }
 
     public void onLocationChanged(Location location) {
         mLastLocation = location;
@@ -1559,13 +1553,8 @@ public abstract class GpsTestActivity extends AppCompatActivity
                 mLastLocation.getTime());
     }
 
-    private void share() {
+    protected void share() {
         UIUtils.createShareDialog(this, mLastLocation, isFileLoggingEnabled(), mFileLogger, null).show();
-    }
-
-    private void sendLocation() {
-//        GpsMonkeyService.shareFile();
-        //restart recording.
     }
 
     /**

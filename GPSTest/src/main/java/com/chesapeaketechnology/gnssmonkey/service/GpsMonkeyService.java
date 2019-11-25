@@ -27,10 +27,12 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.File;
+import java.util.Objects;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import static android.content.Intent.createChooser;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL_FILE;
 
@@ -244,32 +246,50 @@ public class GpsMonkeyService extends Service {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.cancelAll();
 
-        shareFile();
-
-        super.onDestroy();
-    }
-
-    public void shareFile() {
         String dbFile = null;
         if (geoPackageRecorder != null) {
             dbFile = geoPackageRecorder.shutdown();
+            geoPackageRecorder = null;
         }
 
         // Default auto-sharing to false until we add a user setting for it.
         if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), false)) {
-            File file = new File(dbFile);
-            if (file.exists()) {
-                Intent intentShareFile = new Intent(Intent.ACTION_SEND);
-                intentShareFile.setType("application/octet-stream");
-                intentShareFile.putExtra(Intent.EXTRA_STREAM,
-                        FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".geopackage.provider", file));
-                intentShareFile.putExtra(Intent.EXTRA_SUBJECT, file.getName());
-                intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                try {
-                    startActivity(intentShareFile);
-                } catch (ActivityNotFoundException ignore) {
-                }
-            }
+            shareFile(dbFile);
+        }
+
+        super.onDestroy();
+    }
+
+    /**
+     * Sends an intent to share the specified file. If the file is still in use or does not exist,
+     * an error will be logged and nothing will be shared.
+     *
+     * @param gpkgFilePath The file path for the GeoPackage file to share
+     */
+    public void shareFile(String gpkgFilePath) {
+        Objects.requireNonNull(gpkgFilePath, "Parameter gpkgFilePath must not be null.");
+
+        // Log an error and refuse to share the file if it is still in use.
+        if (gpkgFilePath.equals(geoPackageRecorder.getCurrentGeoPackageFilePath())) {
+            Log.e(TAG, "Cannot share a file that is still in use; rollover or close the file first. File:" + gpkgFilePath);
+            return;
+        }
+
+        File file = new File(gpkgFilePath);
+        if (!file.exists()) {
+            Log.e(TAG, "File does not exist: " + gpkgFilePath);
+            return;
+        }
+
+        Intent intentShareFile = new Intent(Intent.ACTION_SEND);
+        intentShareFile.setType("application/octet-stream");
+        intentShareFile.putExtra(Intent.EXTRA_STREAM,
+                FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".geopackage.provider", file));
+        intentShareFile.putExtra(Intent.EXTRA_SUBJECT, file.getName());
+        intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(createChooser(intentShareFile, "Share gpkg file"));
+        } catch (ActivityNotFoundException ignore) {
         }
     }
 
@@ -318,6 +338,26 @@ public class GpsMonkeyService extends Service {
         if (geoPackageRecorder != null) {
             geoPackageRecorder.onLocationChanged(location);
         }
+    }
+
+    /**
+     * Closes the currently open GeoPackage file and opens a new one.
+     *
+     * @return The file path for the closed file, or null if one was not open.
+     */
+    public String rolloverGeoPackageFile() {
+        String geoPackageFilePath = null;
+
+        if (geoPackageRecorder != null) {
+            geoPackageFilePath = geoPackageRecorder.closeGeoPackageDatabase();
+            geoPackageRecorder.openGeoPackageDatabase();
+        }
+
+        return geoPackageFilePath;
+    }
+
+    public boolean isDataRecorded() {
+        return geoPackageRecorder != null && geoPackageRecorder.isDataRecorded();
     }
 
     /**

@@ -196,12 +196,14 @@ public class GeoPackageDatabase {
     }
 
     /**
-     * Creates, opens, and adds tables to a GeoPackage database with the provided name.
+     * Creates, opens, and adds tables to a GeoPackage database with the provided name. Note: this
+     * method and any other method that accesses the GeoPackage is synchronized to ensure the
+     * database doesn't get closed while it is being updated.
      *
      * @param databaseName the name of the database
      * @throws SQLException If an error occurs creating the database SRS or tables
      */
-    public void start(String databaseName) throws SQLException {
+    public synchronized void start(String databaseName) throws SQLException {
         if (!gpkgManager.exists(databaseName)) {
             gpkgManager.create(databaseName);
         }
@@ -436,11 +438,13 @@ public class GeoPackageDatabase {
     }
 
     /**
-     * Writes the provide GNSS measurement event data to the database.
+     * Writes the provide GNSS measurement event data to the database. Note: this method and any
+     * other method that accesses the GeoPackage is synchronized to ensure the database doesn't get
+     * closed while it is being updated.
      *
      * @param event The event providing the GNSS measurement data
      */
-    public void writeGnssMeasurements(final GnssMeasurementsEvent event) {
+    public synchronized void writeGnssMeasurements(final GnssMeasurementsEvent event) {
         try {
             Collection<GnssMeasurement> gnssMeasurements = event.getMeasurements();
 
@@ -556,11 +560,13 @@ public class GeoPackageDatabase {
     }
 
     /**
-     * Writes the provided location data to the database.
+     * Writes the provided location data to the database. Note: this method and any other method
+     * that accesses the GeoPackage is synchronized to ensure the database doesn't get closed while
+     * it is being updated.
      *
      * @param event The updated location
      */
-    public void writeLocation(final Location location) {
+    public synchronized void writeLocation(final Location location) {
         try {
             // TODO KMB: I think we might have this backwards... we should probably create
             //  this mapping when the GNSS data is received using the current location at
@@ -680,11 +686,13 @@ public class GeoPackageDatabase {
     }
 
     /**
-     * Writes the provided GNSS status to the database.
+     * Writes the provided GNSS status to the database. Note: this method and any other method that
+     * accesses the GeoPackage is synchronized to ensure the database doesn't get closed while it is
+     * being updated.
      *
      * @param event The updated GNSS status
      */
-    public void writeSatelliteStatus(final GnssStatus status) {
+    public synchronized void writeSatelliteStatus(final GnssStatus status) {
         try {
             int numSats = status.getSatelliteCount();
 
@@ -714,11 +722,13 @@ public class GeoPackageDatabase {
     }
 
     /**
-     * Writes the provided sensor status to the database.
+     * Writes the provided sensor status to the database. Note: this method and any other method
+     * that accesses the GeoPackage is synchronized to ensure the database doesn't get closed while
+     * it is being updated.
      *
      * @param event The event providing the sensor status
      */
-    public void writeSensorStatus(final SensorEvent event) {
+    public synchronized void writeSensorStatus(final SensorEvent event) {
         try {
             float[] values = event.values;
             if ((values != null) && (values.length > 0)) {
@@ -815,9 +825,11 @@ public class GeoPackageDatabase {
     }
 
     /**
-     * Shuts down the GeoPackage database.
+     * Shuts down the GeoPackage database. Note: this method and any other method that accesses the
+     * GeoPackage is synchronized to ensure the database doesn't get closed while it is being
+     * updated.
      */
-    public void shutdown() {
+    public synchronized void shutdown() {
         if (gpsGpkg != null) {
             gpsGpkg.close();
             gpsGpkg = null;
