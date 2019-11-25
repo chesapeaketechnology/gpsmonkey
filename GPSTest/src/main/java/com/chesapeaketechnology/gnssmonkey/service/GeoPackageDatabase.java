@@ -367,9 +367,9 @@ public class GeoPackageDatabase {
         SimpleAttributesTable table = SimpleAttributesTable.create(SAT_TABLE_NAME, tblcols);
 
         UserMappingTable mappingTable = UserMappingTable.create(SAT_MAP_TABLE_NAME);
-        satDao = rte.getSimpleAttributesDao(SAT_TABLE_NAME);
 
         ExtendedRelation satExtRel = rte.addSimpleAttributesRelationship(POINTS_TABLE_NAME, table, mappingTable);
+        satDao = rte.getSimpleAttributesDao(SAT_TABLE_NAME);
         satMapDao = rte.getMappingDao(satExtRel);
     }
 
@@ -415,9 +415,9 @@ public class GeoPackageDatabase {
         SimpleAttributesTable table = SimpleAttributesTable.create(CLOCK_TABLE_NAME, tblcols);
 
         UserMappingTable mappingTable = UserMappingTable.create(CLOCK_MAP_TABLE_NAME);
-        clkDao = rte.getSimpleAttributesDao(CLOCK_TABLE_NAME);
 
         ExtendedRelation clkExtRel = rte.addSimpleAttributesRelationship(SAT_TABLE_NAME, table, mappingTable);
+        clkDao = rte.getSimpleAttributesDao(CLOCK_TABLE_NAME);
         clkMapDao = rte.getMappingDao(clkExtRel);
     }
 

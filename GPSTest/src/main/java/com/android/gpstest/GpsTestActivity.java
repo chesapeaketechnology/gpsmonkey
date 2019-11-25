@@ -1370,15 +1370,26 @@ public abstract class GpsTestActivity extends AppCompatActivity
                         // Turn GPS on or off
                         if (!mSwitch.isChecked() && mStarted) {
                             gpsStop();
+                            onGpsSwitchStateChange(false);
                         } else {
                             if (mSwitch.isChecked() && !mStarted) {
                                 gpsStart();
+                                onGpsSwitchStateChange(true);
                             }
                         }
                     }
                 });
             }
         }
+    }
+
+    /**
+     * Callback for listening to changes in the state of the GPS on/off switch. Child classes can
+     * override this method to handle changes in the GPS switch state.
+     *
+     * @param gpsOn Indicates if the switch is set to on
+     */
+    protected void onGpsSwitchStateChange(boolean gpsOn) {
     }
 
     @Override
@@ -1555,7 +1566,6 @@ public abstract class GpsTestActivity extends AppCompatActivity
     private void sendLocation() {
 //        GpsMonkeyService.shareFile();
         //restart recording.
-//        GpsMonkeyService.getGeoPackageRecorder().startup();
     }
 
     /**

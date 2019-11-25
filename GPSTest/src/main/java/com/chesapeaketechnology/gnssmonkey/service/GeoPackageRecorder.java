@@ -21,7 +21,9 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Saves GNSS data into a GeoPackage
+ * Saves GNSS data into a GeoPackage. This class is responsible for creating new GeoPackage
+ * databases as necessary, providing data to the database, and closing databases when they are no
+ * longer needed.
  */
 public class GeoPackageRecorder extends HandlerThread {
     private static final String TAG = "GPSMonkey.GpkgRec";
@@ -29,12 +31,11 @@ public class GeoPackageRecorder extends HandlerThread {
 
     @SuppressWarnings("SpellCheckingInspection")
     private static final SimpleDateFormat FILENAME_FRIENDLY_TIME_FORMAT = new SimpleDateFormat("YYYYMMdd-HHmmss", Locale.US);
+    public static final String JOURNAL_FILE_SUFFIX = "-journal";
 
     private final Context context;
-    private final Config config;
     private Handler handler;
     private final AtomicBoolean ready = new AtomicBoolean(false);
-
     private GeoPackageDatabase gpkgDatabase;
     private String gpkgFilePath;
     private String gpkgFolderPath;
@@ -42,29 +43,18 @@ public class GeoPackageRecorder extends HandlerThread {
     protected GeoPackageRecorder(Context context) {
         super("GeoPkgRcdr");
         this.context = context;
-        config = Config.getInstance(context);
-    }
-
-    @Override
-    protected void onLooperPrepared() {
-        handler = new Handler();
-
+        Config config = Config.getInstance(context);
         gpkgFolderPath = config.getSaveDirectoryPath();
 
         if (gpkgFolderPath == null) {
             Log.e(TAG, "Unable to find GPSMonkey storage location; using Download directory");
             gpkgFolderPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
         }
+    }
 
-        try {
-            gpkgFilePath = gpkgFolderPath + "/" + createGpkgFilename();
-
-            gpkgDatabase = new GeoPackageDatabase(context);
-            gpkgDatabase.start(gpkgFilePath);
-            ready.set(true);
-        } catch (SQLException e) {
-            Log.e(TAG, "Error setting up GeoPackage", e);
-        }
+    @Override
+    protected void onLooperPrepared() {
+        handler = new Handler();
     }
 
     /**
@@ -78,27 +68,27 @@ public class GeoPackageRecorder extends HandlerThread {
     }
 
     public void onGnssMeasurementsReceived(final GnssMeasurementsEvent event) {
-        if (ready.get() && (handler != null) && (event != null)) {
+        if (ready.get() && (event != null)) {
             handler.post(() -> gpkgDatabase.writeGnssMeasurements(event));
         }
     }
 
     public void onLocationChanged(final Location location) {
-        if (ready.get() && (handler != null)) {
+        if (ready.get() && location != null) {
             handler.post(() -> gpkgDatabase.writeLocation(location));
         }
     }
 
     public void onSatelliteStatusChanged(final GnssStatus status) {
-        if (ready.get() && (handler != null)) {
+        if (ready.get() && status != null) {
             handler.post(() -> gpkgDatabase.writeSatelliteStatus(status));
         }
     }
 
     // TODO KMB: Need to check with Steve to see if this is still needed. Currently, there is no
-    //  logic to setup the motion table, and nothing was calling this method.
+    //  logic to setup the motion table, and nothing is calling this method.
     public void onSensorUpdated(final SensorEvent event) {
-        if (ready.get() && (handler != null) && (event != null)) {
+        if (ready.get() && (event != null)) {
             handler.post(() -> gpkgDatabase.writeSensorStatus(event));
         }
     }
@@ -110,14 +100,13 @@ public class GeoPackageRecorder extends HandlerThread {
      */
     public String shutdown() {
         Log.d(TAG, "GeoPackageRecorder.shutdown()");
-        ready.set(false);
+        closeGeoPackageDatabase();
 
         getLooper().quit();
 
-        gpkgDatabase.shutdown();
-
         removeTempFiles();
 
+        // TODO KMB: Do we want this toast here, or up one level?
         Toast.makeText(context, context.getString(R.string.data_saved_location) + gpkgFolderPath, Toast.LENGTH_LONG).show();
 
         return gpkgFilePath;
@@ -137,7 +126,7 @@ public class GeoPackageRecorder extends HandlerThread {
                     if ((files != null) && (files.length > 0)) {
                         for (File file : files) {
                             String fileName = file.getName();
-                            if ((fileName != null) && fileName.endsWith("-journal")) {
+                            if ((fileName != null) && fileName.endsWith(JOURNAL_FILE_SUFFIX)) {
                                 //noinspection ResultOfMethodCallIgnored
                                 file.delete();
                             }
@@ -146,6 +135,48 @@ public class GeoPackageRecorder extends HandlerThread {
                 }
             }
         } catch (Exception ignore) {
+        }
+    }
+
+    /**
+     * Opens a new GeoPackage database.
+     */
+    public void openGeoPackageDatabase() {
+        if (ready.get()) {
+            Log.w(TAG, "Open called while another gpkg that was already open: " + gpkgFilePath +
+                    "; closing it now.");
+            closeGeoPackageDatabase();
+        }
+
+        try {
+            gpkgFilePath = gpkgFolderPath + "/" + createGpkgFilename();
+
+            gpkgDatabase = new GeoPackageDatabase(context);
+            gpkgDatabase.start(gpkgFilePath);
+            ready.set(true);
+        } catch (SQLException e) {
+            Log.e(TAG, "Error setting up GeoPackage", e);
+        }
+    }
+
+    /**
+     * Closes the current GeoPackage database.
+     */
+    public void closeGeoPackageDatabase() {
+        ready.set(false);
+
+        if (gpkgDatabase != null) {
+            gpkgDatabase.shutdown();
+
+            // Delete the journal file for the database that was just shutdown.
+            try {
+                if (gpkgFilePath != null) {
+                    File journalFile = new File(gpkgFilePath + JOURNAL_FILE_SUFFIX);
+                    //noinspection ResultOfMethodCallIgnored
+                    journalFile.delete();
+                }
+            } catch (Exception ignore) {
+            }
         }
     }
 }

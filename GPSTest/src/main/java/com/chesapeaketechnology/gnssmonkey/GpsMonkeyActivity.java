@@ -1,7 +1,7 @@
 package com.chesapeaketechnology.gnssmonkey;
 
+import com.android.gpstest.Application;
 import com.android.gpstest.GpsTestActivity;
-import com.android.gpstest.GpsTestListener;
 import com.android.gpstest.R;
 import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
 
@@ -25,7 +25,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
-
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -33,7 +32,7 @@ import androidx.core.content.ContextCompat;
  * Extension of {@link GpsTestActivity} to manage the GPS Monkey service (and isolate code changes
  * for GPS Monkey from existing GPS Test code to simplify merging in changes from forked app).
  */
-public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListener {
+public class GpsMonkeyActivity extends GpsTestActivity {
     protected static final int REQUEST_DISABLE_BATTERY_OPTIMIZATION = 401;
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
@@ -55,6 +54,9 @@ public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListene
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
+            // Note: this method will only be called if the connection is dropped; it will *not* be
+            // called when we unbind the service. That means, we need to make sure to update the
+            // serviceBound variable when we call unbind().
             serviceBound = false;
             gpsMonkeyService = null;
         }
@@ -64,10 +66,6 @@ public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListene
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Add this class as a listener to the GpsTestActivity in order to be notified of changes to
-        // the GPS on/off switch.
-        addListener(this);
-
 //        permissionsPassed = checkPermissions();
 //        if (permissionsPassed)
         startService();
@@ -75,32 +73,11 @@ public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListene
     }
 
     /**
-     * Called when the GPS state is set to on (either initially or due to the GPS on/off switch
-     * being toggled).
-     */
-    @Override
-    public void gpsStart() {
-        if (serviceBound && (gpsMonkeyService != null)) {
-            gpsMonkeyService.startGps();
-        }
-    }
-
-    /**
-     * Called when the GPS state is set to off due to the GPS on/off switch being toggled.
-     */
-    @Override
-    public void gpsStop() {
-        if (serviceBound && (gpsMonkeyService != null)) {
-            gpsMonkeyService.stopGps();
-        }
-    }
-
-    /**
      * Starts the GPS Monkey service which handles logging the GNSS data to a GeoPackage file.
      */
     private void startService() {
         if (serviceIntent == null) serviceIntent = new Intent(this, GpsMonkeyService.class);
-        
+
         // TODO KMB: I don't think this case can happen. Even when Android was forced to kill the
         //  process (following instructions here: https://stackoverflow.com/a/18695974), when
         //  onCreate() was called, serviceBound was false and gpsMonkeyService was null.
@@ -166,6 +143,17 @@ public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListene
         }
     }
 
+    @Override
+    protected void onGpsSwitchStateChange(boolean gpsOn) {
+        if (serviceBound && (gpsMonkeyService != null)) {
+            if (gpsOn) {
+                gpsMonkeyService.startGps();
+            } else {
+                gpsMonkeyService.stopGps();
+            }
+        }
+    }
+
     /**
      * Called when the activity is no longer visible. This method should release components that
      * were initialized in {@link #onStart()}.
@@ -178,6 +166,7 @@ public class GpsMonkeyActivity extends GpsTestActivity implements GpsTestListene
         if (serviceBound) {
             try {
                 unbindService(serviceConnection);
+                serviceBound = false;
             } catch (Exception e) {
                 Log.e(TAG, "Error unbinding service", e);
             }
