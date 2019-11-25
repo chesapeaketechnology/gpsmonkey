@@ -106,9 +106,6 @@ public class GeoPackageRecorder extends HandlerThread {
 
         removeTempFiles();
 
-        // TODO KMB: Do we want this toast here, or up one level?
-        Toast.makeText(context, context.getString(R.string.data_saved_location) + gpkgFolderPath, Toast.LENGTH_LONG).show();
-
         return gpkgFilePath;
     }
 
@@ -177,6 +174,8 @@ public class GeoPackageRecorder extends HandlerThread {
                 }
             } catch (Exception ignore) {
             }
+
+            Toast.makeText(context, context.getString(R.string.data_saved_location) + gpkgFolderPath, Toast.LENGTH_LONG).show();
         }
     }
 }
