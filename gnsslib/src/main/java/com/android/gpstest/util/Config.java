@@ -4,11 +4,14 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import java.io.File;
 import java.util.UUID;
 
 public class Config {
+    private static final String TAG = "GPSMonkey.Config";
+    public static final String DEFAULT_SAVE_DIRECTORY_NAME = "GPSMonkey";
     public static final String PREFS_SAVE_DIR = "savedir";
     public static final String PREFS_AUTO_SHARE = "autoshare";
     public static final String PREFS_PROCESS_EW = "processew";
@@ -21,7 +24,7 @@ public class Config {
     private static boolean gpsOnly = false;
     private static Config instance = null;
 
-    private String savedDir = null;
+    private String saveDirectoryPath = null;
     private boolean processEwOnboard;
     private SharedPreferences prefs;
     private String uuid = null;
@@ -43,7 +46,7 @@ public class Config {
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREFS_SQAN, true);
     }
 
-    public static Config getInstance(Context context) {
+    public static synchronized Config getInstance(Context context) {
         if (instance == null) {
             instance = new Config(context);
         }
@@ -67,7 +70,7 @@ public class Config {
         this.processEwOnboard = processEwOnboard;
         SharedPreferences.Editor edit = prefs.edit();
         edit.putBoolean(PREFS_PROCESS_EW, processEwOnboard);
-        edit.commit();
+        edit.apply();
     }
 
     public boolean isAutoShareEnabled() {
@@ -76,7 +79,7 @@ public class Config {
 
     public void setGpsOnly(boolean gpsOnly) {
         Config.gpsOnly = gpsOnly;
-        prefs.edit().putBoolean(PREFS_GPS_ONLY, gpsOnly).commit();
+        prefs.edit().putBoolean(PREFS_GPS_ONLY, gpsOnly).apply();
     }
 
     public boolean processEWOnboard() {
@@ -94,30 +97,28 @@ public class Config {
         return uuid;
     }
 
-    public String getSavedDir() {
-        if (savedDir == null) {
-            /*savedDir = prefs.getString(PREFS_SAVE_DIR, null);
-            if (savedDir != null) {
-                try {
-                    Uri savedDirUri = Uri.parse(savedDir);
-                    if (savedDirUri != null) {
-                        context.getContentResolver().takePersistableUriPermission(savedDirUri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION); //Keep the permissions to access this location up to date across reboots
-                    }
-                } catch (NullPointerException ignore) {}
-            }
-            if (savedDir == null)
-                savedDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();*/
-            if (savedDir == null) {
-                File folder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "GPSMonkey");
+    /**
+     * @return The path of the directory where any GeoPackage files should be saved.
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public String getSaveDirectoryPath() {
+        // If the save directory path has already been determined, use the existing one.
+        // Note: if/when we add support for the user to set the directory path in the preferences,
+        // it may be possible for the user to change the desired save directory, but if we have
+        // already saved files to a different one, we don't want to change the active save directory
+        // until after a restart so files won't be in two places (including any temp files we would
+        // need to delete).
+        if (saveDirectoryPath == null) {
+            File saveDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DEFAULT_SAVE_DIRECTORY_NAME);
 
-                //noinspection ResultOfMethodCallIgnored
-                folder.mkdirs();
-                savedDir = folder.getAbsolutePath();
-            }
+            saveDirectory.mkdirs();
+            saveDirectory.setReadable(true);
+            saveDirectoryPath = saveDirectory.getAbsolutePath();
+
+            Log.i(TAG, "Save directory: " + saveDirectoryPath);
         }
-        return savedDir;
+
+        return saveDirectoryPath;
     }
 
     public void setSavedDir(String savedDir) {
@@ -127,6 +128,6 @@ public class Config {
         } else {
             edit.putString(PREFS_SAVE_DIR, savedDir);
         }
-        edit.commit();
+        edit.apply();
     }
 }
