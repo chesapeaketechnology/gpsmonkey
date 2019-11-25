@@ -220,7 +220,13 @@ public class GpsMonkeyActivity extends GpsTestActivity {
         super.onDestroy();
     }
 
+    /**
+     * Called when the activity successfully binds to the service.
+     */
     protected void onGPSMonkeyServiceConnected() {
+        // It's possible to miss the initial setting of the GPS switch state if our service isn't
+        // bound yet, so check as soon as we bind to see if GPS should be started.
+        onGpsSwitchStateChange(mStarted);
     }
 
     /**

@@ -27,6 +27,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Objects;
 
 import androidx.core.content.ContextCompat;
@@ -55,6 +56,7 @@ public class GpsMonkeyService extends Service {
     private static final long TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE = 1000L * 15L;
 
     private final IBinder gpsMonkeyBinder = new GpsMonkeyBinder();
+    private final AtomicBoolean gpsStarted = new AtomicBoolean(false);
 
     /**
      * Callback for receiving GNSS measurements from the location manager.
@@ -297,6 +299,8 @@ public class GpsMonkeyService extends Service {
      * Opens a new GeoPackage database for recording GPS data and registers for GPS updates.
      */
     public void startGps() {
+        if (gpsStarted.getAndSet(true)) return;
+
         if (geoPackageRecorder != null) geoPackageRecorder.openGeoPackageDatabase();
 
         boolean hasPermissions = ContextCompat.checkSelfPermission(this,
@@ -321,6 +325,8 @@ public class GpsMonkeyService extends Service {
      * Unregisters from GPS updates and closes the GeoPackage database recording the GPS data.
      */
     public void stopGps() {
+        if (!gpsStarted.getAndSet(false)) return;
+
         if (locationManager != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 locationManager.unregisterGnssMeasurementsCallback(measurementListener);

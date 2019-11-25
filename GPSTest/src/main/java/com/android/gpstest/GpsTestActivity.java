@@ -171,7 +171,7 @@ public abstract class GpsTestActivity extends AppCompatActivity
 
     private static boolean mTruncateVector = false;
 
-    boolean mStarted;
+    protected boolean mStarted;
 
     boolean mFaceTrueNorth;
 
