@@ -209,8 +209,11 @@ public class GeoPackageRecorder extends HandlerThread {
         try {
             if (gpkgFilePath != null) {
                 File journalFile = new File(gpkgFilePath + JOURNAL_FILE_SUFFIX);
-                //noinspection ResultOfMethodCallIgnored
-                journalFile.delete();
+
+                if (journalFile.exists()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    journalFile.delete();
+                }
             }
         } catch (Exception ignore) {
         }
