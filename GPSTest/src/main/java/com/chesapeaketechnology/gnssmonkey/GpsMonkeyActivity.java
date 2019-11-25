@@ -163,8 +163,7 @@ public class GpsMonkeyActivity extends GpsTestActivity {
 
     protected void share() {
         if (serviceBound && (gpsMonkeyService != null)) {
-            String geoPackageFile = gpsMonkeyService.rolloverGeoPackageFile();
-            gpsMonkeyService.shareFile(geoPackageFile);
+            gpsMonkeyService.shareFile();
         } else {
             Toast.makeText(this, "The GPS Monkey service is not running", Toast.LENGTH_LONG).show();
         }

@@ -144,14 +144,18 @@ public class GeoPackageRecorder extends HandlerThread {
     }
 
     /**
-     * @return The file path for the currently opened GeoPackage or null if one does not exist.
+     * @return True if the recorder has an open database that is available to store data.
      */
-    public String getCurrentGeoPackageFilePath() {
-        if (ready.get()) {
-            return gpkgFilePath;
-        } else {
-            return null;
-        }
+    public boolean isActive() {
+        return ready.get();
+    }
+
+    /**
+     * @return The file path for the currently opened GeoPackage or the last GeoPackage if a file is
+     * not open (use {@link #isActive()} to differentiate).
+     */
+    public String getFilePath() {
+        return gpkgFilePath;
     }
 
     /**
@@ -169,6 +173,7 @@ public class GeoPackageRecorder extends HandlerThread {
 
             gpkgDatabase = new GeoPackageDatabase(context);
             gpkgDatabase.start(gpkgFilePath);
+            Log.d(TAG, "Opened file: " + gpkgFilePath);
             ready.set(true);
         } catch (SQLException e) {
             Log.e(TAG, "Error setting up GeoPackage", e);
@@ -198,6 +203,7 @@ public class GeoPackageRecorder extends HandlerThread {
         }
 
         gpkgDatabase.shutdown();
+        Log.d(TAG, "Closed file: " + gpkgFilePath);
 
         // Delete the journal file for the database that was just shutdown.
         try {

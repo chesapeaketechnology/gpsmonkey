@@ -27,8 +27,8 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.File;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -263,19 +263,31 @@ public class GpsMonkeyService extends Service {
     }
 
     /**
-     * Sends an intent to share the specified file. If the file is still in use or does not exist,
-     * an error will be logged and nothing will be shared.
+     * Prompts the user to select a method for sharing the most recent GeoPackage file. If GPS is
+     * active, the current file will be closed before it is shared, and a new one will be opened to
+     * continue receiving data.
+     */
+    public void shareFile() {
+        String geoPackageFile;
+
+        // First check if GPS is active and we are actively updating a file; if so, we need to close
+        // it before sharing.
+        if (geoPackageRecorder.isActive()) {
+            geoPackageFile = rolloverGeoPackageFile();
+        } else {
+            geoPackageFile = geoPackageRecorder.getFilePath();
+        }
+
+        shareFile(geoPackageFile);
+    }
+
+    /**
+     * Sends an intent to share the specified file.
      *
      * @param gpkgFilePath The file path for the GeoPackage file to share
      */
-    public void shareFile(String gpkgFilePath) {
+    protected void shareFile(String gpkgFilePath) {
         Objects.requireNonNull(gpkgFilePath, "Parameter gpkgFilePath must not be null.");
-
-        // Log an error and refuse to share the file if it is still in use.
-        if (gpkgFilePath.equals(geoPackageRecorder.getCurrentGeoPackageFilePath())) {
-            Log.e(TAG, "Cannot share a file that is still in use; rollover or close the file first. File:" + gpkgFilePath);
-            return;
-        }
 
         File file = new File(gpkgFilePath);
         if (!file.exists()) {
@@ -290,6 +302,7 @@ public class GpsMonkeyService extends Service {
         intentShareFile.putExtra(Intent.EXTRA_SUBJECT, file.getName());
         intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
+            Log.i(TAG, "Sharing file: " + gpkgFilePath);
             startActivity(createChooser(intentShareFile, "Share gpkg file"));
         } catch (ActivityNotFoundException ignore) {
         }
@@ -300,6 +313,8 @@ public class GpsMonkeyService extends Service {
      */
     public void startGps() {
         if (gpsStarted.getAndSet(true)) return;
+
+        Log.i(TAG, "Starting GPS");
 
         if (geoPackageRecorder != null) geoPackageRecorder.openGeoPackageDatabase();
 
@@ -326,6 +341,8 @@ public class GpsMonkeyService extends Service {
      */
     public void stopGps() {
         if (!gpsStarted.getAndSet(false)) return;
+
+        Log.i(TAG, "Stopping GPS");
 
         if (locationManager != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
