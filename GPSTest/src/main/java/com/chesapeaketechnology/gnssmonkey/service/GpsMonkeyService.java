@@ -295,15 +295,21 @@ public class GpsMonkeyService extends Service {
             return;
         }
 
-        Intent intentShareFile = new Intent(Intent.ACTION_SEND);
-        intentShareFile.setType("application/octet-stream");
-        intentShareFile.putExtra(Intent.EXTRA_STREAM,
+        Intent shareFileIntent = new Intent(Intent.ACTION_SEND);
+        shareFileIntent.setType("application/octet-stream");
+        shareFileIntent.putExtra(Intent.EXTRA_STREAM,
                 FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".geopackage.provider", file));
-        intentShareFile.putExtra(Intent.EXTRA_SUBJECT, file.getName());
-        intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        shareFileIntent.putExtra(Intent.EXTRA_SUBJECT, file.getName());
+        shareFileIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             Log.i(TAG, "Sharing file: " + gpkgFilePath);
-            startActivity(createChooser(intentShareFile, "Share gpkg file"));
+
+            // Using createChooser() will cause the phone to always prompt the user to select a
+            // sharing method instead of just using the default. This is probably desirable since
+            // based on why they are sharing it, users may want to share in different ways.
+            Intent chooserIntent = createChooser(shareFileIntent, "Share gpkg file");
+            chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(chooserIntent);
         } catch (ActivityNotFoundException ignore) {
         }
     }
