@@ -31,11 +31,11 @@
         android:name=".Application"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@style/AppTheme">
+            android:theme="@style/AppTheme.Dark">
 
         <activity
             android:name=".GpsTestActivity"
-            android:theme="@style/AppTheme.NoActionBar"
+                android:theme="@style/AppTheme.Dark.NoActionBar"
             android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -71,8 +71,8 @@
                 android:value="com.android.gpstest.GpsTestActivity" />
         </activity>
         <activity
-            android:name="com.chesapeaketechnology.gnssmonkey.FailureActivity"
-            android:label="Failure" />
+                android:name="com.chesapeaketechnology.gnssmonkey.RawGnssFailureActivity"
+                android:label="Raw GNSS Failure" />
         <service android:name="com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService" />
 
     </application>

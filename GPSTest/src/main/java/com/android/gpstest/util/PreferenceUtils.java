@@ -15,13 +15,13 @@
  */
 package com.android.gpstest.util;
 
+import com.android.gpstest.Application;
+import com.android.gpstest.R;
+
 import android.annotation.TargetApi;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Build;
-
-import com.android.gpstest.Application;
-import com.android.gpstest.R;
 
 /**
  * A class containing utility methods related to preferences
@@ -35,6 +35,7 @@ public class PreferenceUtils {
 
     /**
      * Gets the string description of a CAPABILITY_* constant
+     *
      * @param capability CAPABILITY_* constant defined in this class
      * @return a string description of the CAPABILITY_* constant
      */
@@ -165,6 +166,18 @@ public class PreferenceUtils {
         return Double.longBitsToDouble(Application.getPrefs().getLong(key, 0));
     }
 
+    /**
+     * Gets a boolean for the provided key from preferences, or the default value if the preference
+     * doesn't currently have a value
+     *
+     * @param key          key for the preference
+     * @param defaultValue the default value to return if the key doesn't have a value
+     * @return a boolean from preferences, or the default value if it doesn't exist
+     */
+    public static boolean getBoolean(String key, boolean defaultValue) {
+        return Application.getPrefs().getBoolean(key, defaultValue);
+    }
+
     public static String getString(String key) {
         return Application.getPrefs().getString(key, null);
     }
@@ -198,7 +211,6 @@ public class PreferenceUtils {
 
     /**
      * Removes the specified preference by deleting it
-     * @param key
      */
     public static void remove(String key) {
         SharedPreferences.Editor edit = Application.getPrefs().edit();
