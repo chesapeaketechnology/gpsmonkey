@@ -1,7 +1,7 @@
 package com.chesapeaketechnology.gnssmonkey;
 
 import com.android.gpstest.Application;
-import com.android.gpstest.GpsTestListener;
+import com.android.gpstest.GpsTestActivity;
 import com.android.gpstest.R;
 import com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService;
 
@@ -24,22 +24,22 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 /**
- * Abstract activity to manage the GPS Monkey service (and isolate code changes for GPS Monkey from
- * existing GPS Test code to simplify merging in changes from forked app).
+ * Extension of {@link GpsTestActivity} to manage the GPS Monkey service (and isolate code changes
+ * for GPS Monkey from existing GPS Test code to simplify merging in changes from forked app).
  */
-public abstract class AGpsMonkeyActivity extends AppCompatActivity {
+public class GpsMonkeyActivity extends GpsTestActivity {
     protected static final int REQUEST_DISABLE_BATTERY_OPTIMIZATION = 401;
     protected static final String TAG = "GPSMonkey.Activity";
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private static final int PERM_REQUEST_CODE = 1;
     private Intent serviceIntent;
-    protected boolean serviceBound = false;
+    protected AtomicBoolean serviceBound = new AtomicBoolean(false);
     protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
 
@@ -49,20 +49,24 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
             Log.d(TAG, "GPS Monkey Service bound to this activity");
             GpsMonkeyService.GpsMonkeyBinder binder = (GpsMonkeyService.GpsMonkeyBinder) service;
             gpsMonkeyService = binder.getService();
-            serviceBound = true;
+            serviceBound.set(true);
             onGPSMonkeyServiceConnected();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
-            serviceBound = false;
+            // Note: this method will only be called if the connection is dropped; it will *not* be
+            // called when we unbind the service. That means, we need to make sure to update the
+            // serviceBound variable when we call unbind().
+            serviceBound.set(false);
             gpsMonkeyService = null;
         }
     };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 //        permissionsPassed = checkPermissions();
 //        if (permissionsPassed)
         startService();
@@ -74,15 +78,8 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
      */
     private void startService() {
         if (serviceIntent == null) serviceIntent = new Intent(this, GpsMonkeyService.class);
-        
-        // TODO KMB: I don't think this case can happen. Even when Android was forced to kill the
-        //  process (following instructions here: https://stackoverflow.com/a/18695974), when
-        //  onCreate() was called, serviceBound was false and gpsMonkeyService was null.
-        if (serviceBound) {
-            gpsMonkeyService.start();
-        } else {
-            startService(serviceIntent);
-        }
+
+        startService(serviceIntent);
     }
 
     /**
@@ -135,39 +132,20 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        if (!serviceBound) {
+        if (!serviceBound.get()) {
             bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         }
     }
 
-    /**
-     * Called when the activity is brought to the foreground and gains focus. This method should
-     * initialize components that are released in {@link #onPause()}.
-     *
-     * {@inheritDoc}
-     */
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (this instanceof GpsTestListener) {
-            if (serviceBound && (gpsMonkeyService != null)) {
-                gpsMonkeyService.setListener((GpsTestListener) this);
+    protected void onGpsSwitchStateChange(boolean gpsOn) {
+        if (serviceBound.get() && (gpsMonkeyService != null)) {
+            if (gpsOn) {
+                gpsMonkeyService.startGps();
+            } else {
+                gpsMonkeyService.stopGps();
             }
         }
-    }
-
-    /**
-     * Called when the activity is losing focus (but may still be visible). This method should
-     * release components that were initialized in {@link #onResume()}.
-     *
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onPause() {
-        if (gpsMonkeyService != null) {
-            gpsMonkeyService.setListener(null);
-        }
-        super.onPause();
     }
 
     /**
@@ -179,7 +157,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (serviceBound) {
+        if (serviceBound.getAndSet(false)) {
             try {
                 unbindService(serviceConnection);
             } catch (Exception e) {
@@ -211,7 +189,7 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         // the app is running, but not have a service running once they kill the app.
         if (isFinishing() && Application.getPrefs().getBoolean(getString(R.string.pref_key_stop_gnss_in_background), false)) {
 
-            if (serviceBound) {
+            if (serviceBound.get()) {
                 stopService(serviceIntent);
             }
         }
@@ -219,10 +197,13 @@ public abstract class AGpsMonkeyActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    /**
+     * Called when the activity successfully binds to the service.
+     */
     protected void onGPSMonkeyServiceConnected() {
-        if (this instanceof GpsTestListener) {
-            gpsMonkeyService.setListener((GpsTestListener) this);
-        }
+        // It's possible to miss the initial setting of the GPS switch state if our service isn't
+        // bound yet, so check as soon as we bind to see if GPS should be started.
+        onGpsSwitchStateChange(mStarted);
     }
 
     /**

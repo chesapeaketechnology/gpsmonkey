@@ -1,7 +1,6 @@
 package com.chesapeaketechnology.gnssmonkey.service;
 
 import com.android.gpstest.Application;
-import com.android.gpstest.GpsTestListener;
 import com.android.gpstest.R;
 import com.android.gpstest.util.PreferenceUtils;
 import com.chesapeaketechnology.gnssmonkey.RawGnssFailureActivity;
@@ -29,6 +28,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -41,7 +41,6 @@ import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.Input
  * TORGI-compliant GeoPackage format.
  */
 public class GpsMonkeyService extends Service {
-
     public static final String ACTION_STOP = "STOP";
     public static final String PREFS_CURRENT_INPUT_MODE = "inputmode";
 
@@ -56,6 +55,7 @@ public class GpsMonkeyService extends Service {
     private static final long TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE = 1000L * 15L;
 
     private final IBinder gpsMonkeyBinder = new GpsMonkeyBinder();
+    private final AtomicBoolean gpsStarted = new AtomicBoolean(false);
 
     /**
      * Callback for receiving GNSS measurements from the location manager.
@@ -79,10 +79,6 @@ public class GpsMonkeyService extends Service {
             if (inputSourceType == LOCAL) {
                 if (geoPackageRecorder != null) {
                     geoPackageRecorder.onSatelliteStatusChanged(status);
-                }
-
-                if (listener != null) {
-                    listener.onSatelliteStatusChanged(status);
                 }
             }
         }
@@ -119,24 +115,18 @@ public class GpsMonkeyService extends Service {
         }
 
         public void onProviderEnabled(String provider) {
-//            if ((listener != null) && (inputSourceType == LOCAL))
-//                listener.onProviderChanged(provider, true);
         }
 
         public void onProviderDisabled(String provider) {
-//            if ((listener != null) && (inputSourceType == LOCAL))
-//                listener.onProviderChanged(provider, false);
         }
     };
 
     private GeoPackageRecorder geoPackageRecorder = null;
-    private Location currentLocation = null;
     private InputSourceType inputSourceType = LOCAL;
     private SharedPreferences.OnSharedPreferenceChangeListener prefChangeListener;
     private long firstGpsAcqTime = Long.MIN_VALUE;
     private boolean gnssRawSupportKnown = false;
     private LocationManager locationManager = null;
-    private GpsTestListener listener = null;
 
     /**
      * Performs one-time setup immediately before either {@link #onStartCommand(Intent, int, int)}
@@ -185,6 +175,10 @@ public class GpsMonkeyService extends Service {
         }
     }
 
+    public void start() {
+        start(inputSourceType);
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
         start(inputSourceType);
@@ -196,48 +190,22 @@ public class GpsMonkeyService extends Service {
             this.inputSourceType = inputSourceType;
             Log.d(TAG, "GPSMonkey mode changed to " + inputSourceType.name());
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-            prefs.edit().putInt(PREFS_CURRENT_INPUT_MODE, inputSourceType.ordinal()).commit();
+            prefs.edit().putInt(PREFS_CURRENT_INPUT_MODE, inputSourceType.ordinal()).apply();
         }
 
-        boolean permissionsPassed = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        permissionsPassed = permissionsPassed && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-
-        if (permissionsPassed) {
-            currentLocation = null;
-            if (locationManager == null) {
-                locationManager = getSystemService(LocationManager.class);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    locationManager.registerGnssMeasurementsCallback(measurementListener);
-                    locationManager.registerGnssStatusCallback(statusListener);
-                }
-
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
-                if (inputSourceType == LOCAL) {
-                    currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                }
-            } else {
-                if (inputSourceType == LOCAL) {
-                    currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (listener != null) {
-                        listener.onLocationChanged(currentLocation);
-                    }
-                }
+        if (inputSourceType == LOCAL_FILE) {
+            if (geoPackageRecorder != null) {
+                geoPackageRecorder.shutdown();
+                geoPackageRecorder = null;
             }
-
-            if (inputSourceType == LOCAL_FILE) {
-                if (geoPackageRecorder != null) {
-                    geoPackageRecorder.shutdown();
-                    geoPackageRecorder = null;
-                }
-            } else {
-                if (geoPackageRecorder == null) {
-                    geoPackageRecorder = new GeoPackageRecorder(this);
-                    geoPackageRecorder.start();
-                }
+        } else {
+            if (geoPackageRecorder == null) {
+                geoPackageRecorder = new GeoPackageRecorder(this);
+                geoPackageRecorder.start();
             }
-
-            setForeground();
         }
+
+        setForeground();
     }
 
     /**
@@ -248,7 +216,7 @@ public class GpsMonkeyService extends Service {
     private void setForeground() {
         PendingIntent pendingIntent = null;
         try {
-            Intent notificationIntent = new Intent(this, Class.forName("com.android.gpstest.GpsTestActivity"));
+            Intent notificationIntent = new Intent(this, Class.forName("com.chesapeaketechnology.gnssmonkey.GpsMonkeyActivity"));
             pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
         } catch (ClassNotFoundException ignore) {
         }
@@ -259,16 +227,11 @@ public class GpsMonkeyService extends Service {
         //TODO
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle(getResources().getString(R.string.app_name));
-        switch (inputSourceType) {
-            case LOCAL_FILE:
-                builder.setTicker(getResources().getString(R.string.notification_historical));
-                builder.setContentText(getResources().getString(R.string.notification_historical));
-                break;
 
-            default:
-                builder.setTicker(getResources().getString(R.string.notification));
-                builder.setContentText(getResources().getString(R.string.notification));
-        }
+        int notificationTextId = (inputSourceType == LOCAL_FILE) ? R.string.notification_historical : R.string.notification;
+        String notificationText = getResources().getString(notificationTextId);
+        builder.setTicker(notificationText);
+        builder.setContentText(notificationText);
 
         // Add an action to the notification for stopping the GPS Monkey service
         Intent intentStop = new Intent(this, GpsMonkeyService.class);
@@ -286,15 +249,7 @@ public class GpsMonkeyService extends Service {
             prefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener);
         }
 
-        if (locationManager != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                locationManager.unregisterGnssMeasurementsCallback(measurementListener);
-                locationManager.unregisterGnssStatusCallback(statusListener);
-            }
-
-            locationManager.removeUpdates(locationListener);
-            locationManager = null;
-        }
+        stopGps();
 
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.cancelAll();
@@ -328,27 +283,55 @@ public class GpsMonkeyService extends Service {
         }
     }
 
-    public void setListener(GpsTestListener listener) {
-        this.listener = listener;
+    /**
+     * Opens a new GeoPackage database for recording GPS data and registers for GPS updates.
+     */
+    public void startGps() {
+        if (gpsStarted.getAndSet(true)) return;
+
+        if (geoPackageRecorder != null) geoPackageRecorder.openGeoPackageDatabase();
+
+        boolean hasPermissions = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        hasPermissions = hasPermissions && ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+
+        if (hasPermissions) {
+            if (locationManager == null) {
+                locationManager = getSystemService(LocationManager.class);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    locationManager.registerGnssMeasurementsCallback(measurementListener);
+                    locationManager.registerGnssStatusCallback(statusListener);
+                }
+
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+            }
+        }
     }
 
-    public void start() {
-        start(inputSourceType);
+    /**
+     * Unregisters from GPS updates and closes the GeoPackage database recording the GPS data.
+     */
+    public void stopGps() {
+        if (!gpsStarted.getAndSet(false)) return;
+
+        if (locationManager != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                locationManager.unregisterGnssMeasurementsCallback(measurementListener);
+                locationManager.unregisterGnssStatusCallback(statusListener);
+            }
+
+            locationManager.removeUpdates(locationListener);
+            locationManager = null;
+        }
+
+        if (geoPackageRecorder != null) geoPackageRecorder.closeGeoPackageDatabase();
     }
 
     public void updateLocation(final Location location) {
-        currentLocation = location;
         if (geoPackageRecorder != null) {
             geoPackageRecorder.onLocationChanged(location);
         }
-
-        if (listener != null) {
-            listener.onLocationChanged(location);
-        }
-    }
-
-    public GeoPackageRecorder getGeoPackageRecorder() {
-        return geoPackageRecorder;
     }
 
     /**

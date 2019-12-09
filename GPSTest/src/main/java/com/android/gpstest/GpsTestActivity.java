@@ -18,6 +18,19 @@
 
 package com.android.gpstest;
 
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
+
+import com.android.gpstest.io.FileLogger;
+import com.android.gpstest.map.MapConstants;
+import com.android.gpstest.util.GpsTestUtil;
+import com.android.gpstest.util.IOUtils;
+import com.android.gpstest.util.LocationUtils;
+import com.android.gpstest.util.MathUtils;
+import com.android.gpstest.util.PermissionUtils;
+import com.android.gpstest.util.PreferenceUtils;
+import com.android.gpstest.util.UIUtils;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -64,9 +77,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
@@ -74,21 +90,6 @@ import androidx.core.view.GravityCompat;
 import androidx.core.view.MenuItemCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentManager;
-
-import com.android.gpstest.io.FileLogger;
-import com.android.gpstest.map.MapConstants;
-import com.android.gpstest.util.GpsTestUtil;
-import com.android.gpstest.util.IOUtils;
-import com.android.gpstest.util.LocationUtils;
-import com.android.gpstest.util.MathUtils;
-import com.android.gpstest.util.PermissionUtils;
-import com.android.gpstest.util.PreferenceUtils;
-import com.android.gpstest.util.UIUtils;
-import com.chesapeaketechnology.gnssmonkey.AGpsMonkeyActivity;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
-
-import java.util.ArrayList;
 
 import static com.android.gpstest.NavigationDrawerFragment.NAVDRAWER_ITEM_ACCURACY;
 import static com.android.gpstest.NavigationDrawerFragment.NAVDRAWER_ITEM_CLEAR_AIDING_DATA;
@@ -105,7 +106,7 @@ import static com.android.gpstest.util.GpsTestUtil.writeGnssMeasurementToAndroid
 import static com.android.gpstest.util.GpsTestUtil.writeNavMessageToAndroidStudio;
 import static com.android.gpstest.util.GpsTestUtil.writeNmeaToAndroidStudio;
 
-public class GpsTestActivity extends AGpsMonkeyActivity
+public abstract class GpsTestActivity extends AppCompatActivity
         implements LocationListener, SensorEventListener, NavigationDrawerFragment.NavigationDrawerCallbacks {
 
     private static final String TAG = "GpsTestActivity";
@@ -170,7 +171,7 @@ public class GpsTestActivity extends AGpsMonkeyActivity
 
     private static boolean mTruncateVector = false;
 
-    boolean mStarted;
+    protected boolean mStarted;
 
     boolean mFaceTrueNorth;
 
@@ -299,6 +300,7 @@ public class GpsTestActivity extends AGpsMonkeyActivity
 
     /**
      * Save instance state locally so we can use it after the permission callback
+     *
      * @param savedInstanceState instance state to save
      */
     private void saveInstanceState(Bundle savedInstanceState) {
@@ -372,7 +374,9 @@ public class GpsTestActivity extends AGpsMonkeyActivity
      * Destroys and recreates the main activity in a new process.  If we don't use a new process,
      * the map state and Accuracy ground truth location TextViews get messed up with mixed locales
      * and partial state retention.
-     * @param currentIntent the Intent to pass to the re-created app, or null if there is no intent to pass
+     *
+     * @param currentIntent the Intent to pass to the re-created app, or null if there is no intent
+     *                      to pass
      */
     void recreateApp(Intent currentIntent) {
         Intent i = new Intent(this, GpsTestActivity.class);
@@ -439,11 +443,11 @@ public class GpsTestActivity extends AGpsMonkeyActivity
             recreate();
         }
 
-        addStatusListener();
-
-        addOrientationSensorListener();
-
-        addNmeaListener();
+//        addStatusListener();
+//
+//        addOrientationSensorListener();
+//
+//        addNmeaListener();
 
         if (!mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             promptEnableGps();
@@ -463,13 +467,13 @@ public class GpsTestActivity extends AGpsMonkeyActivity
         checkNmeaOutput(settings);
         checkLocationOutput(settings);
 
-        if (GpsTestUtil.isGnssStatusListenerSupported()) {
-            checkGnssMeasurementOutput(settings);
-        }
-
-        if (GpsTestUtil.isGnssStatusListenerSupported()) {
-            checkNavMessageOutput(settings);
-        }
+//        if (GpsTestUtil.isGnssStatusListenerSupported()) {
+//            checkGnssMeasurementOutput(settings);
+//        }
+//
+//        if (GpsTestUtil.isGnssStatusListenerSupported()) {
+//            checkNavMessageOutput(settings);
+//        }
 
         if (PermissionUtils.hasGrantedFileWritePermission(this) && !mFileLogger.isStarted() &&
                 isFileLoggingEnabled()) {
@@ -860,7 +864,7 @@ public class GpsTestActivity extends AGpsMonkeyActivity
         return mActivity;
     }
 
-    void addListener(GpsTestListener listener) {
+    protected void addListener(GpsTestListener listener) {
         mGpsTestListeners.add(listener);
     }
 
@@ -870,16 +874,18 @@ public class GpsTestActivity extends AGpsMonkeyActivity
             return;
         }
 
-//        if(mGrpcConnectionController == null) {
-//            mGrpcConnectionController = new GrpcConnectionController();
-//
-//        }
-//        Currently disabled.
-//        mGrpcConnectionController.connectToGrpcServer("192.168.1.46", 2621);
-
         if (!mStarted) {
             mLocationManager
                     .requestLocationUpdates(mProvider.getName(), minTime, minDistance, this);
+            addStatusListener();
+            addOrientationSensorListener();
+            addNmeaListener();
+            if (GpsTestUtil.isGnssStatusListenerSupported()) {
+                SharedPreferences settings = Application.getPrefs();
+                checkGnssMeasurementOutput(settings);
+                checkNavMessageOutput(settings);
+            }
+
             mStarted = true;
 
             // Show Toast only if the user has set minTime or minDistance to something other than default values
@@ -904,15 +910,18 @@ public class GpsTestActivity extends AGpsMonkeyActivity
     }
 
     private synchronized void gpsStop() {
-
-//        if (mGrpcConnectionController != null) {
-//            mGrpcConnectionController.disconnectFromGrpcServer();
-//        }
         if (mLocationManager == null) {
             return;
         }
         if (mStarted) {
             mLocationManager.removeUpdates(this);
+            removeStatusListener();
+            removeNmeaListener();
+            if (GpsTestUtil.isGnssStatusListenerSupported()) {
+                removeNavMessageListener();
+                removeGnssMeasurementsListener();
+            }
+
             mStarted = false;
             // Stop progress bar
             setSupportProgressBarIndeterminateVisibility(Boolean.FALSE);
@@ -1361,15 +1370,26 @@ public class GpsTestActivity extends AGpsMonkeyActivity
                         // Turn GPS on or off
                         if (!mSwitch.isChecked() && mStarted) {
                             gpsStop();
+                            onGpsSwitchStateChange(false);
                         } else {
                             if (mSwitch.isChecked() && !mStarted) {
                                 gpsStart();
+                                onGpsSwitchStateChange(true);
                             }
                         }
                     }
                 });
             }
         }
+    }
+
+    /**
+     * Callback for listening to changes in the state of the GPS on/off switch. Child classes can
+     * override this method to handle changes in the GPS switch state.
+     *
+     * @param gpsOn Indicates if the switch is set to on
+     */
+    protected void onGpsSwitchStateChange(boolean gpsOn) {
     }
 
     @Override
@@ -1546,7 +1566,6 @@ public class GpsTestActivity extends AGpsMonkeyActivity
     private void sendLocation() {
 //        GpsMonkeyService.shareFile();
         //restart recording.
-//        GpsMonkeyService.getGeoPackageRecorder().startup();
     }
 
     /**

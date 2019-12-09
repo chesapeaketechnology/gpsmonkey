@@ -10,24 +10,34 @@ import android.location.LocationListener;
  */
 public interface GpsTestListener extends LocationListener {
 
-    void gpsStart();
+    default void gpsStart() {
+    }
 
-    void gpsStop();
+    default void gpsStop() {
+    }
 
     @Deprecated
-    void onGpsStatusChanged(int event, GpsStatus status);
+    default void onGpsStatusChanged(int event, GpsStatus status) {
+    }
 
-    void onGnssFirstFix(int ttffMillis);
+    default void onGnssFirstFix(int ttffMillis) {
+    }
 
-    void onSatelliteStatusChanged(GnssStatus status);
+    default void onSatelliteStatusChanged(GnssStatus status) {
+    }
 
-    void onGnssStarted();
+    default void onGnssStarted() {
+    }
 
-    void onGnssStopped();
+    default void onGnssStopped() {
+    }
 
-    void onGnssMeasurementsReceived(GnssMeasurementsEvent event);
+    default void onGnssMeasurementsReceived(GnssMeasurementsEvent event) {
+    }
 
-    void onOrientationChanged(double orientation, double tilt);
+    default void onOrientationChanged(double orientation, double tilt) {
+    }
 
-    void onNmeaMessage(String message, long timestamp);
+    default void onNmeaMessage(String message, long timestamp) {
+    }
 }

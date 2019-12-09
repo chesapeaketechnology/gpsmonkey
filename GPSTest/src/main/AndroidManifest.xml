@@ -34,7 +34,7 @@
             android:theme="@style/AppTheme.Dark">
 
         <activity
-            android:name=".GpsTestActivity"
+                android:name="com.chesapeaketechnology.gnssmonkey.GpsMonkeyActivity"
                 android:theme="@style/AppTheme.Dark.NoActionBar"
             android:launchMode="singleInstance">
             <intent-filter>
