@@ -26,6 +26,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -40,7 +41,7 @@ public class GpsMonkeyActivity extends GpsTestActivity {
     private static final String PREF_BATTERY_OPT_IGNORE = "nvroptbat";
     private static final int PERM_REQUEST_CODE = 1;
     private Intent serviceIntent;
-    protected boolean serviceBound = false;
+    protected AtomicBoolean serviceBound = new AtomicBoolean(false);
     protected GpsMonkeyService gpsMonkeyService = null;
     protected boolean permissionsPassed = false;
 
@@ -50,7 +51,7 @@ public class GpsMonkeyActivity extends GpsTestActivity {
             Log.d(TAG, "GPS Monkey Service bound to this activity");
             GpsMonkeyService.GpsMonkeyBinder binder = (GpsMonkeyService.GpsMonkeyBinder) service;
             gpsMonkeyService = binder.getService();
-            serviceBound = true;
+            serviceBound.set(true);
             onGPSMonkeyServiceConnected();
         }
 
@@ -59,7 +60,7 @@ public class GpsMonkeyActivity extends GpsTestActivity {
             // Note: this method will only be called if the connection is dropped; it will *not* be
             // called when we unbind the service. That means, we need to make sure to update the
             // serviceBound variable when we call unbind().
-            serviceBound = false;
+            serviceBound.set(false);
             gpsMonkeyService = null;
         }
     };
@@ -133,14 +134,14 @@ public class GpsMonkeyActivity extends GpsTestActivity {
     protected void onStart() {
         super.onStart();
 
-        if (!serviceBound) {
+        if (!serviceBound.get()) {
             bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         }
     }
 
     @Override
     protected void onGpsSwitchStateChange(boolean gpsOn) {
-        if (serviceBound && (gpsMonkeyService != null)) {
+        if (serviceBound.get() && (gpsMonkeyService != null)) {
             if (gpsOn) {
                 gpsMonkeyService.startGps();
             } else {
@@ -178,10 +179,9 @@ public class GpsMonkeyActivity extends GpsTestActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (serviceBound) {
+        if (serviceBound.getAndSet(false)) {
             try {
                 unbindService(serviceConnection);
-                serviceBound = false;
             } catch (Exception e) {
                 Log.e(TAG, "Error unbinding service", e);
             }
@@ -211,7 +211,7 @@ public class GpsMonkeyActivity extends GpsTestActivity {
         // the app is running, but not have a service running once they kill the app.
         if (isFinishing() && Application.getPrefs().getBoolean(getString(R.string.pref_key_stop_gnss_in_background), false)) {
 
-            if (serviceBound) {
+            if (serviceBound.get()) {
                 stopService(serviceIntent);
             }
         }

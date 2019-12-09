@@ -92,7 +92,6 @@
 
     <string name="pref_key_sharing_category">sharing_category</string>
 
-
     <string name="pref_key_gps_category">gps_category</string>
     <string name="pref_key_auto_start_gps">auto_start_gps</string>
     <string name="pref_key_gps_min_time">gps_min_time</string>
@@ -128,11 +127,13 @@
     <string name="pref_key_preferred_speed_units_v2">preference_speed_units_v2</string>
     <string name="pref_key_language">preference_language</string>
 
+    <string name="pref_key_ignore_raw_gnss_failure">ignore_raw_gnss_failure</string>
+
     <!-- Default preference values -->
     <string name="pref_gps_min_time_default_sec">1</string>
     <string name="pref_gps_min_distance_default_meters">0</string>
 
-    <!-- The contants in map_type_entries and below match those in GoogleMap object:
+    <!-- The constants in map_type_entries and below match those in GoogleMap object:
     https://developers.google.com/maps/documentation/android/reference/com/google/android/gms/maps/GoogleMap -->
     <string-array name="map_type_values">
         <item>1</item>
