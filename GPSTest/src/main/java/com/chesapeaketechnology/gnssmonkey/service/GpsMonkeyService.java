@@ -2,7 +2,8 @@ package com.chesapeaketechnology.gnssmonkey.service;
 
 import com.android.gpstest.Application;
 import com.android.gpstest.R;
-import com.chesapeaketechnology.gnssmonkey.FailureActivity;
+import com.android.gpstest.util.PreferenceUtils;
+import com.chesapeaketechnology.gnssmonkey.RawGnssFailureActivity;
 
 import android.Manifest;
 import android.app.Notification;
@@ -97,7 +98,14 @@ public class GpsMonkeyService extends Service {
                         firstGpsAcqTime = System.currentTimeMillis();
                     } else if (System.currentTimeMillis() > firstGpsAcqTime + TIME_TO_WAIT_FOR_GNSS_RAW_BEFORE_FAILURE) {
                         hasGnssRawFailureNagLaunched = true;
-                        startActivity(new Intent(GpsMonkeyService.this, FailureActivity.class));
+
+                        // The user may choose to continue using the app even without GNSS since
+                        // they do get some satellite status on this display. If that is the case,
+                        // they can choose not to be nagged about this every time they launch the app.
+                        boolean ignoreRawGnssFailure = PreferenceUtils.getBoolean(Application.get().getString(R.string.pref_key_ignore_raw_gnss_failure), false);
+                        if (!ignoreRawGnssFailure) {
+                            startActivity(new Intent(GpsMonkeyService.this, RawGnssFailureActivity.class));
+                        }
                     }
                 }
             }
