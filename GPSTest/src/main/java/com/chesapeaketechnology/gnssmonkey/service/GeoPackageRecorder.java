@@ -30,7 +30,7 @@ public class GeoPackageRecorder extends HandlerThread {
     private static final String FILENAME_PREFIX = "GNSS-MONKEY";
 
     @SuppressWarnings("SpellCheckingInspection")
-    private static final SimpleDateFormat FILENAME_FRIENDLY_TIME_FORMAT = new SimpleDateFormat("YYYYMMdd-HHmmss", Locale.US);
+    private static final SimpleDateFormat FILENAME_FRIENDLY_TIME_FORMAT = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US);
     public static final String JOURNAL_FILE_SUFFIX = "-journal";
 
     private final Context context;
