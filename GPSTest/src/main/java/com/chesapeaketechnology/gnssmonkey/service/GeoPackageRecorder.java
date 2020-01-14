@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /**
  * Saves GNSS data into a GeoPackage. This class is responsible for creating new GeoPackage
@@ -31,10 +32,11 @@ public class GeoPackageRecorder extends HandlerThread {
 
     @SuppressWarnings("SpellCheckingInspection")
     private static final SimpleDateFormat FILENAME_FRIENDLY_TIME_FORMAT = new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US);
-    public static final String JOURNAL_FILE_SUFFIX = "-journal";
+    private static final String JOURNAL_FILE_SUFFIX = "-journal";
 
     private final Context context;
     private Handler handler;
+    private final AtomicBoolean isDataRecorded = new AtomicBoolean(false);
     private final AtomicBoolean ready = new AtomicBoolean(false);
     private GeoPackageDatabase gpkgDatabase;
     private String gpkgFilePath;
@@ -57,40 +59,46 @@ public class GeoPackageRecorder extends HandlerThread {
         handler = new Handler();
     }
 
-    /**
-     * Creates a new GeoPackage filename using the filename prefix and the current time.
-     *
-     * @return The filename
-     */
-    private String createGpkgFilename() {
-        String timestamp = FILENAME_FRIENDLY_TIME_FORMAT.format(System.currentTimeMillis());
-        return FILENAME_PREFIX + "-" + timestamp + ".gpkg";
+    public void onGnssMeasurementsReceived(final GnssMeasurementsEvent event) {
+        provideDataToDatabase((e) -> gpkgDatabase.writeGnssMeasurements(e), event);
     }
 
-    public void onGnssMeasurementsReceived(final GnssMeasurementsEvent event) {
-        if (ready.get() && (event != null)) {
-            handler.post(() -> gpkgDatabase.writeGnssMeasurements(event));
+    /**
+     * Performs all the common logic for providing data to the database.
+     *
+     * @param consumer The method to call with the data
+     * @param data     The data
+     * @param <T>      The type of the data
+     */
+    private <T> void provideDataToDatabase(Consumer<T> consumer, T data) {
+        if (ready.get() && (data != null)) {
+            handler.post(() -> {
+                consumer.accept(data);
+                isDataRecorded.getAndSet(true);
+            });
         }
     }
 
     public void onLocationChanged(final Location location) {
-        if (ready.get() && location != null) {
-            handler.post(() -> gpkgDatabase.writeLocation(location));
-        }
+        provideDataToDatabase((l) -> gpkgDatabase.writeLocation(l), location);
     }
 
     public void onSatelliteStatusChanged(final GnssStatus status) {
-        if (ready.get() && status != null) {
-            handler.post(() -> gpkgDatabase.writeSatelliteStatus(status));
-        }
+        provideDataToDatabase((s) -> gpkgDatabase.writeSatelliteStatus(s), status);
     }
 
     // TODO KMB: Need to check with Steve to see if this is still needed. Currently, there is no
     //  logic to setup the motion table, and nothing is calling this method.
     public void onSensorUpdated(final SensorEvent event) {
-        if (ready.get() && (event != null)) {
-            handler.post(() -> gpkgDatabase.writeSensorStatus(event));
-        }
+        provideDataToDatabase((e) -> gpkgDatabase.writeSensorStatus(e), event);
+    }
+
+    /**
+     * @return True if any data has ever been recorded by the recorder, whether in the current
+     * database or a previous one.
+     */
+    public boolean isDataRecorded() {
+        return isDataRecorded.get();
     }
 
     /**
@@ -136,6 +144,21 @@ public class GeoPackageRecorder extends HandlerThread {
     }
 
     /**
+     * @return True if the recorder has an open database that is available to store data.
+     */
+    public boolean isActive() {
+        return ready.get();
+    }
+
+    /**
+     * @return The file path for the currently opened GeoPackage or the last GeoPackage if a file is
+     * not open (use {@link #isActive()} to differentiate).
+     */
+    public String getFilePath() {
+        return gpkgFilePath;
+    }
+
+    /**
      * Opens a new GeoPackage database.
      */
     public void openGeoPackageDatabase() {
@@ -150,6 +173,7 @@ public class GeoPackageRecorder extends HandlerThread {
 
             gpkgDatabase = new GeoPackageDatabase(context);
             gpkgDatabase.start(gpkgFilePath);
+            Log.d(TAG, "Opened file: " + gpkgFilePath);
             ready.set(true);
         } catch (SQLException e) {
             Log.e(TAG, "Error setting up GeoPackage", e);
@@ -157,25 +181,45 @@ public class GeoPackageRecorder extends HandlerThread {
     }
 
     /**
-     * Closes the current GeoPackage database.
+     * Creates a new GeoPackage filename using the filename prefix and the current time.
+     *
+     * @return The filename
      */
-    public void closeGeoPackageDatabase() {
+    private String createGpkgFilename() {
+        String timestamp = FILENAME_FRIENDLY_TIME_FORMAT.format(System.currentTimeMillis());
+        return FILENAME_PREFIX + "-" + timestamp + ".gpkg";
+    }
+
+    /**
+     * Closes the current GeoPackage database.
+     *
+     * @return The file path of the database that was closed, or null if there was not an open database.
+     */
+    public String closeGeoPackageDatabase() {
         ready.set(false);
 
-        if (gpkgDatabase != null) {
-            gpkgDatabase.shutdown();
+        if (gpkgDatabase == null) {
+            return null;
+        }
 
-            // Delete the journal file for the database that was just shutdown.
-            try {
-                if (gpkgFilePath != null) {
-                    File journalFile = new File(gpkgFilePath + JOURNAL_FILE_SUFFIX);
+        gpkgDatabase.shutdown();
+        Log.d(TAG, "Closed file: " + gpkgFilePath);
+
+        // Delete the journal file for the database that was just shutdown.
+        try {
+            if (gpkgFilePath != null) {
+                File journalFile = new File(gpkgFilePath + JOURNAL_FILE_SUFFIX);
+
+                if (journalFile.exists()) {
                     //noinspection ResultOfMethodCallIgnored
                     journalFile.delete();
                 }
-            } catch (Exception ignore) {
             }
-
-            Toast.makeText(context, context.getString(R.string.data_saved_location) + gpkgFolderPath, Toast.LENGTH_LONG).show();
+        } catch (Exception ignore) {
         }
+
+        Toast.makeText(context, context.getString(R.string.data_saved_location) + gpkgFolderPath, Toast.LENGTH_LONG).show();
+
+        return gpkgFilePath;
     }
 }

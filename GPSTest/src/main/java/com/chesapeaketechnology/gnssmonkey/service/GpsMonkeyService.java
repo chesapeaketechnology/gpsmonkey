@@ -28,11 +28,13 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.File;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import static android.content.Intent.createChooser;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL;
 import static com.chesapeaketechnology.gnssmonkey.service.GpsMonkeyService.InputSourceType.LOCAL_FILE;
 
@@ -254,32 +256,69 @@ public class GpsMonkeyService extends Service {
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.cancelAll();
 
-        shareFile();
-
-        super.onDestroy();
-    }
-
-    public void shareFile() {
         String dbFile = null;
         if (geoPackageRecorder != null) {
             dbFile = geoPackageRecorder.shutdown();
+            geoPackageRecorder = null;
         }
 
         // Default auto-sharing to false until we add a user setting for it.
         if ((dbFile != null) && Application.getPrefs().getBoolean(getString(R.string.auto_share), false)) {
-            File file = new File(dbFile);
-            if (file.exists()) {
-                Intent intentShareFile = new Intent(Intent.ACTION_SEND);
-                intentShareFile.setType("application/octet-stream");
-                intentShareFile.putExtra(Intent.EXTRA_STREAM,
-                        FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".geopackage.provider", file));
-                intentShareFile.putExtra(Intent.EXTRA_SUBJECT, file.getName());
-                intentShareFile.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                try {
-                    startActivity(intentShareFile);
-                } catch (ActivityNotFoundException ignore) {
-                }
-            }
+            shareFile(dbFile);
+        }
+
+        super.onDestroy();
+    }
+
+    /**
+     * Prompts the user to select a method for sharing the most recent GeoPackage file. If GPS is
+     * active, the current file will be closed before it is shared, and a new one will be opened to
+     * continue receiving data.
+     */
+    public void shareFile() {
+        String geoPackageFile;
+
+        // First check if GPS is active and we are actively updating a file; if so, we need to close
+        // it before sharing.
+        if (geoPackageRecorder.isActive()) {
+            geoPackageFile = rolloverGeoPackageFile();
+        } else {
+            geoPackageFile = geoPackageRecorder.getFilePath();
+        }
+
+        shareFile(geoPackageFile);
+    }
+
+    /**
+     * Sends an intent to share the specified file.
+     *
+     * @param gpkgFilePath The file path for the GeoPackage file to share
+     */
+    protected void shareFile(String gpkgFilePath) {
+        Objects.requireNonNull(gpkgFilePath, "Parameter gpkgFilePath must not be null.");
+
+        File file = new File(gpkgFilePath);
+        if (!file.exists()) {
+            Log.e(TAG, "File does not exist: " + gpkgFilePath);
+            return;
+        }
+
+        Intent shareFileIntent = new Intent(Intent.ACTION_SEND);
+        shareFileIntent.setType("application/octet-stream");
+        shareFileIntent.putExtra(Intent.EXTRA_STREAM,
+                FileProvider.getUriForFile(this, this.getApplicationContext().getPackageName() + ".geopackage.provider", file));
+        shareFileIntent.putExtra(Intent.EXTRA_SUBJECT, file.getName());
+        shareFileIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            Log.i(TAG, "Sharing file: " + gpkgFilePath);
+
+            // Using createChooser() will cause the phone to always prompt the user to select a
+            // sharing method instead of just using the default. This is probably desirable since
+            // based on why they are sharing it, users may want to share in different ways.
+            Intent chooserIntent = createChooser(shareFileIntent, "Share gpkg file");
+            chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(chooserIntent);
+        } catch (ActivityNotFoundException ignore) {
         }
     }
 
@@ -288,6 +327,8 @@ public class GpsMonkeyService extends Service {
      */
     public void startGps() {
         if (gpsStarted.getAndSet(true)) return;
+
+        Log.i(TAG, "Starting GPS");
 
         if (geoPackageRecorder != null) geoPackageRecorder.openGeoPackageDatabase();
 
@@ -315,6 +356,8 @@ public class GpsMonkeyService extends Service {
     public void stopGps() {
         if (!gpsStarted.getAndSet(false)) return;
 
+        Log.i(TAG, "Stopping GPS");
+
         if (locationManager != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 locationManager.unregisterGnssMeasurementsCallback(measurementListener);
@@ -332,6 +375,26 @@ public class GpsMonkeyService extends Service {
         if (geoPackageRecorder != null) {
             geoPackageRecorder.onLocationChanged(location);
         }
+    }
+
+    /**
+     * Closes the currently open GeoPackage file and opens a new one.
+     *
+     * @return The file path for the closed file, or null if one was not open.
+     */
+    public String rolloverGeoPackageFile() {
+        String geoPackageFilePath = null;
+
+        if (geoPackageRecorder != null) {
+            geoPackageFilePath = geoPackageRecorder.closeGeoPackageDatabase();
+            geoPackageRecorder.openGeoPackageDatabase();
+        }
+
+        return geoPackageFilePath;
+    }
+
+    public boolean isDataRecorded() {
+        return geoPackageRecorder != null && geoPackageRecorder.isDataRecorded();
     }
 
     /**

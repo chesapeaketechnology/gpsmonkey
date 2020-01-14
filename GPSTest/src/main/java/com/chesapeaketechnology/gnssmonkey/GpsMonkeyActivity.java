@@ -21,6 +21,8 @@ import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -145,6 +147,26 @@ public class GpsMonkeyActivity extends GpsTestActivity {
             } else {
                 gpsMonkeyService.stopGps();
             }
+        }
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        MenuItem item;
+
+        item = menu.findItem(R.id.share);
+        if (item != null) {
+            item.setVisible(serviceBound && gpsMonkeyService != null && gpsMonkeyService.isDataRecorded());
+        }
+
+        return true;
+    }
+
+    protected void share() {
+        if (serviceBound && (gpsMonkeyService != null)) {
+            gpsMonkeyService.shareFile();
+        } else {
+            Toast.makeText(this, "The GPS Monkey service is not running", Toast.LENGTH_LONG).show();
         }
     }
 
