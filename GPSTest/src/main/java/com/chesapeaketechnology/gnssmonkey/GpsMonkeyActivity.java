@@ -156,14 +156,14 @@ public class GpsMonkeyActivity extends GpsTestActivity {
 
         item = menu.findItem(R.id.share);
         if (item != null) {
-            item.setVisible(serviceBound && gpsMonkeyService != null && gpsMonkeyService.isDataRecorded());
+            item.setVisible(serviceBound.get() && gpsMonkeyService != null && gpsMonkeyService.isDataRecorded());
         }
 
         return true;
     }
 
     protected void share() {
-        if (serviceBound && (gpsMonkeyService != null)) {
+        if (serviceBound.get() && (gpsMonkeyService != null)) {
             gpsMonkeyService.shareFile();
         } else {
             Toast.makeText(this, "The GPS Monkey service is not running", Toast.LENGTH_LONG).show();
